@@ -1,0 +1,791 @@
+// must be all in one file
+// more info https://sourceforge.net/p/sdcc/code/HEAD/tree/trunk/sdcc/src/SDCCpeeph.c
+
+replace restart {
+ ld	%1, h
+ ld	%2, l
+} by {
+ ; uniform order
+ ld	%2, l
+ ld	%1, h
+} if canAssign(%1%2 '#0x0001')
+
+replace restart {
+ ld	hl, #%1 + %2
+ dec	hl
+} by {
+ ; move dec to literal
+ ld	hl, #%1 + %3
+} if immdInRange(0 65535 'sub' %2 1 %3)
+
+replace restart {
+ ld	hl, #%1 - %2
+ dec	hl
+} by {
+ ; move dec to literal
+ ld	hl, #%1 - %3
+} if immdInRange(0 65535 'add' %2 1 %3)
+
+replace restart {
+ ld	hl, #%1 + %2
+ inc	hl
+} by {
+ ; move inc to literal
+ ld	hl, #%1 + %3
+} if immdInRange(0 65535 'add' %2 1 %3)
+
+replace restart {
+ ld	hl, #%1 - %2
+ inc	hl
+} by {
+ ; move inc to literal
+ ld	hl, #%1 - %3
+} if immdInRange(0 65535 'sub' %2 1 %3)
+
+
+
+replace {
+ and	a, #0x%1%2
+ swap	a
+} by {
+ ; swap and and swap
+ swap	a
+ and	a, #0x%2%1
+}
+
+replace {
+ ; redundant AND
+ and	a, #0x0f
+ and	a, #%1
+} by {
+ and	a, #%1;2b 2c saved
+} if immdInRange(0 0x0f 'sub' 0x0f %1 %2)
+
+replace {
+ and	a, #%1
+ swap	a
+ and	a, #0xf0
+} by {
+ ; redundant AND
+ and	a, #%1;2b 2c saved
+ swap	a
+} if immdInRange(0 0x0f 'sub' 0x0f %1 %2)
+
+replace {
+ ; redundant AND
+ and	a, #0xf0
+ and	a, #%1
+} by {
+ and	a, #%1;2b 2c saved
+} if immdInRange(0x10 0xf0 'sub' 0xf0 %1 %2)
+
+
+
+replace {
+ ; ld	a, (hl+/-) is faster
+ ld	a, (hl)
+ dec	hl
+} by {
+ ld	a, (hl-);save 1b 2c
+}
+
+replace {
+ ld	%1, (hl)
+ dec	hl
+ ld	a, (hl%2)
+} by {
+ ; hack until notUsed is available
+ ld	a, (hl-);1b 2c
+ ld	%1, a	;1b 1c
+ ld	a, (hl%2)
+} if canAssign(%1 'a')
+
+replace {
+ ld	%1, (hl)
+ inc	hl
+ ld	a, (hl%2)
+} by {
+ ; hack until notUsed is available
+ ld	a, (hl+);1b 2c
+ ld	%1, a	;1b 1c
+ ld	a, (hl%2)
+} if canAssign(%1 'a')
+
+replace {
+ ld	(hl), %1
+ dec	hl
+ ld	a, (hl%2)
+} by {
+ ; hack until notUsed is available
+ ld	a, %1	;1b 1c
+ ld	(hl-),a;1b 2c
+ ld	a, (hl%2)
+} if canAssign('a' %1)
+
+replace {
+ ld	(hl), %1
+ inc	hl
+ ld	a, (hl%2)
+} by {
+ ; hack until notUsed is available
+ ld	a, %1	;1b 1c
+ ld	(hl+),a;1b 2c
+ ld	a, (hl%2)
+} if canAssign('a' %1)
+
+replace {
+ ld	a, (hl)
+ inc	hl
+} by {
+ ld	a, (hl+);save 1b 2c
+}
+
+replace {
+ ; ld	a, (hl+/-) is faster
+ ld	(hl), a
+ dec	hl
+} by {
+ ld	(hl-), a;save 1b 2c
+}
+
+replace {
+ ld	(hl), a
+ inc	hl
+} by {
+ ld	(hl+), a;save 1b 2c
+}
+
+
+
+// 16bit <<4
+replace {
+ ld	  %1, (hl)
+ ld	  %2, #0x00
+ sla  %1
+ rl   %2
+ sla  %1
+ rl   %2
+ sla  %1
+ rl   %2
+ sla  %1
+ rl   %2
+} by {
+ push af ; backup
+ ld   a, (hl)
+ swap a
+ ld   %1, a
+ and  a, #0x0f
+ ld   %2, a
+ ld   a, %1
+ and  a, #0xf0
+ ld   %1, a
+ pop  af ; restore
+} if canAssign(%2 'a'), canAssign(%1 'a'), canAssign('a' %1)
+
+
+
+
+replace restart {
+ push	%1%2
+ inc	sp
+ ld	a,%2
+ push	af
+ inc	sp
+} by {
+ push	%1%2
+ ld	a, %2
+ ; modified z80 peephole 105 pushed de
+}
+// %2 can't be f
+
+replace {
+ xor	a, a
+ push	af
+ inc	sp
+ xor	a, a
+ push	af
+ inc	sp
+ xor	a, a
+ push	af
+ inc	sp
+} by {
+ ; three 0 arguments
+ xor	a, a
+ push	af
+ inc	sp
+ xor	a, a
+ push	af
+ inc	sp
+ push	af
+ inc	sp
+}
+
+replace {
+ xor	a, a
+ push	af
+ inc	sp
+ xor	a, a
+ push	af
+ inc	sp
+} by {
+ ; even faster than ld bc, #0
+ xor	a, a	; 1b 1c ; a=0
+ rra		; 1b 1c ; f=0
+ push	af	; 3b 8c saved
+}
+
+replace {
+ xor	a, a
+ push	af
+ inc	sp
+ ld	a, #0x80
+ push	af
+ inc	sp
+} by {
+ ; no idea if somebody needs this
+ xor	a, a	; 1b 1c ; a=0 f=0x80
+ push	af	; 5b 9c saved
+}
+
+replace {
+ ld	%1, #%3
+ push	%1%2
+ inc	sp
+ ld	%1, #%3
+ push	%1%2
+ inc	sp
+} by {
+ ; need this just once
+ ld	%1, #%3
+ push	%1%2
+ inc	sp
+ push	%1%2
+ inc	sp
+}
+
+replace {
+ ld	%1, #%3
+ push	%1%2
+ inc	sp
+ push	%1%2
+ inc	sp
+ ld	%1, #%3
+ push	%1%2
+ inc	sp
+} by {
+ ; need this just once
+ ld	%1, #%3
+ push	%1%2
+ inc	sp
+ push	%1%2
+ inc	sp
+ push	%1%2
+ inc	sp
+}
+
+replace {
+ ld	a, #%1
+ push	af
+ inc	sp
+ ld	a, #%2
+ push	af
+ inc	sp
+} by {
+ ld	a, #%1
+ push	af
+ inc	sp
+ inc	a ; previous paramater
+ push	af
+ inc	sp
+} if immdInRange(1 1 'sub' %2 %1 %3)
+
+replace {
+ ld	a, #%1
+ push	af
+ inc	sp
+ ld	a, #%2
+ push	af
+ inc	sp
+} by {
+ ld	a, #%1
+ push	af
+ inc	sp
+ dec	a ; previous paramater
+ push	af
+ inc	sp
+} if immdInRange(1 1 'sub' %1 %2 %3)
+
+replace {
+ xor	a, a
+ push	af
+ inc	sp
+ ld	a, #0x01
+ push	af
+ inc	sp
+} by {
+ xor	a, a
+ push	af
+ inc	sp
+ inc	a
+ push	af
+ inc	sp
+}
+
+replace {
+ xor	a, a
+ push	af
+ inc	sp
+ ld	a, #0xff
+ push	af
+ inc	sp
+} by {
+ xor	a, a
+ push	af
+ inc	sp
+ dec	a
+ push	af
+ inc	sp
+}
+
+
+
+
+replace {
+ ld	hl, #%1
+ ld	a, (hl)
+ res	%2, a
+ ld	hl, #%1
+ ld	(hl), a
+} by {
+ ; Improve SHOW_BKG etc
+ ld	hl, #%1
+ res	%2, (hl)
+ ld	a, (hl)
+}
+
+replace {
+ ld	hl, #%1
+ ld	a, (hl)
+ set	%2, a
+ ld	hl, #%1
+ ld	(hl), a
+} by {	
+ ld	hl, #%1
+ set	%2, (hl)
+ ld	a, (hl)
+}
+
+replace {
+ set	%2, a
+ ld	hl, #%1
+} by {
+ ; just a helper for the following
+ ld	hl, #%1
+ set	%2, a
+}
+
+replace {
+ res	%2, a
+ ld	hl, #%1
+} by {
+ ld	hl, #%1
+ res	%2, a
+}
+
+replace {
+ ld	l, #0x%2
+ ld	a, (hl)
+ ld	hl, #0xff%2
+} by {
+ ld	l, #0x%2
+ ld	a, (hl)
+ ld	h, #0xff
+}
+
+
+
+
+replace {
+ ld	l, #%2
+ ld	(hl), #%1
+ ld	l, #%3
+} by {
+ ; for TMA_REG, TIMA_REG etc.
+ ld	l, #%2
+ ld	(hl), #%1
+ inc	l
+} if immdInRange(1 1 'sub' %3 %2 %4)
+
+replace {
+ ld	l, #%2
+ ld	(hl), #%1
+ ld	l, #%3
+} by {
+ ; for TMA_REG, TIMA_REG etc.
+ ld	l, #%2
+ ld	(hl), #%1
+ dec	l
+} if immdInRange(1 1 'sub' %2 %3 %4)
+
+
+replace{
+ xor	a, a
+ ld	(%1), a
+ ld	a, #0x01
+} by {
+ xor	a, a
+ ld	(%1), a
+ inc	a
+}
+
+
+replace{
+ add %3, #%1
+ add %3, #%2
+} by {
+ ; dublicated add
+ add %3, #%1+%2
+}
+
+replace {
+ ld	%2, l
+ ld	%1, h
+ ld	a, (%1%2)
+ inc	a
+ ld	(%1%2), a
+} by {
+ ;
+ inc	(hl);1byte smaller 
+ ld	a, (hl)
+ ld	%2, l
+ ld	%1, h
+}
+
+replace {
+ ldhl	sp, #%1
+ ld	a, (hl)
+ sub	a, #%2
+ jr	%3,%4
+ ldhl	sp, #%1
+ ld	a, (hl)
+ sub	a, #%5
+ jp	%6,%7
+} by {
+ ; no need to load sp twice
+ ldhl	sp, #%1
+ ld	a, (hl)
+ sub	a, #%2
+ jr	%3,%4
+ ld	a, (hl)
+ sub	a, #%5
+ jp	%6,%7
+}
+
+replace {
+ ldhl	sp, #%1
+ ld	a, (hl)
+ sub	a, #%2
+ jr	%3,%4
+ ld	a, (hl)
+ sub	a, #%5
+ jp	%6,%7
+} by {
+ ; we can reuse a safely
+ ldhl	sp, #%1
+ ld	a, (hl)
+ sub	a, #%2
+ jr	%3,%4
+ sub	a, #%8
+ jp	%6,%7
+} if immdInRange(0 255 'sub' %5 %2 %8)
+
+replace restart {
+ ld	a,(hl)
+ inc	a
+ ld	(hl),a;
+} by {
+ inc	(hl)
+ ld	a,(hl)
+ ; modified z80 peephole 115 incremented in (hl) instead of going through a.
+}
+
+replace restart {
+ ld	a,(hl)
+ dec	a
+ ld	(hl),a;
+} by {
+ dec	(hl)
+ ld	a,(hl)
+ ; modified z80 peephole 115 incremented in (hl) instead of going through a.
+}
+
+replace {
+ dec	hl
+ ld	a, (hl+)
+ ld	h, (hl)
+ ld	l, a
+} by {
+ ; save one dec
+ ld	a, (hl-)
+ ld	l, (hl)
+ ld	h, a
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////
+// from sdcc z80:
+
+replace restart {
+	ld	a, %1
+	set	%2, a
+	ld	%1, a
+} by {
+	; z80 peephole 75 set bit %2 of %1 directly instead of going through a.
+	set	%2, %1
+	ld	a, %1
+} if canAssign(%1 'b'), notSame(%1 '(hl+)'), notSame(%1 '(hl-)')
+// canAssign(%1 'b') is true, iff set b, %1 is possible.
+
+replace restart {
+	ld	a, %1
+	res	%2, a
+	ld	%1, a
+} by {
+	; z80 peephole 77 reset bit %2 of %1 directly instead of going through a.
+	res	%2, %1
+	ld	a, %1
+} if canAssign(%1 'b'), notSame(%1 '(hl+)'), notSame(%1 '(hl-)')
+// canAssign(%1 'b') is true, iff set b, %1 is possible.
+
+replace restart {
+	ld	%1,a
+	ld	a,%2
+	or	a,%1
+} by {
+	ld	%1,a
+	or	a,%2
+	; z80 peephole 99 removed load by reordering or arguments.
+} if notVolatile(%1), canAssign('b' %2)
+// canAssign('b' %2) is true, iff or a,%2 is possible.
+
+replace restart {
+	dec	a
+	or	a, a
+} by {
+	dec	a
+	; z80 peephole 102a removed redundant or after dec.
+}
+
+replace restart {
+	dec	%1
+	ld	a, %1
+	or	a, a
+} by {
+	dec	%1
+	ld	a, %1
+	; peephole 102b removed redundant or after dec.
+}
+
+replace restart {
+	ld	%1,%2
+	push	%1
+	pop	%4
+	ld	%1,%3
+} by {
+	ld	%4,%2
+	; z80 peephole 110 moved %2 directly into de instead of going through %1.
+	ld	%1,%3
+}
+
+replace restart {
+	ld	%1,a
+	ld	a,%2
+	add	a,%1
+} by {
+	ld	%1, a
+	; z80 peephole 118 removed load by exploiting commutativity of addition.
+	add	a,%2
+} if notSame(%2 '(bc)' '(de)'), canAssign('b' %2)
+// canAssign('b' %2) is true, iff add a,%2 is possible.
+
+replace restart {
+	sub	a,%1
+	jp	NZ,%2
+	ld	%3,#0x00
+} by {
+	sub	a,%1
+	jp	NZ,%2
+	ld	%3,a
+	; z80 peephole 123 replaced constant #0x00 by a (which has just been tested to be #0x00).
+}
+
+replace restart {
+	inc	a
+	jp	NZ,%1
+	ld	%2,#0x00
+} by {
+	inc	a
+	jp	NZ,%1
+	ld	%2,a
+	; z80 peephole 124 replaced constant #0x00 by a (which has just been tested to be #0x00).
+}
+
+replace restart {
+	dec	a
+	jp	NZ,%1
+	ld	%2,#0x00
+} by {
+	dec	a
+	jp	NZ,%1
+	ld	%2,a
+	; z80 peephole 125 replaced constant #0x00 by a (which has just been tested to be #0x00).
+}
+
+replace restart {
+	or	a,%1
+	jp	NZ,%2
+	ld	a,%3
+	or	a,a
+} by {
+	or	a,%1
+	jp	NZ,%2
+	or	a,%3
+	; z80 peephole 126 shortened or using a (which has just been tested to be #0x00).
+} if canAssign('b' %3)
+// canAssign('b' %2) is true, iff or a,%2 is possible.
+
+replace restart {
+	sub	a,%1
+	jp	NZ,%2
+	ld	a,%3
+	or	a,a
+} by {
+	sub	a,%1
+	jp	NZ,%2
+	or	a,%3
+	; z80 peephole 127 shortened or using a (which has just been tested to be #0x00).
+} if canAssign('b' %3)
+// canAssign('b' %2) is true, iff or a,%2 is possible.
+
+replace restart {
+	ld	hl,#%1
+	add	hl,%2
+	inc	hl
+} by {
+	ld	hl,#%1+1
+	add	hl,%2
+	; z80 peephole 129 moved increment of hl to constant.
+}
+
+replace restart {
+	inc	sp
+	ld	sp,%1
+} by {
+	; z80 peephole 134 removed redundant inc sp.
+	ld	sp,%1
+}
+
+replace restart {
+	dec	sp
+	ld	sp,%1
+} by {
+	; modified z80 peephole 134 removed redundant inc sp.
+	ld	sp,%1
+}
+
+replace restart {
+	ld	%1,#%2
+	ld	%3,%4
+	ld	%1,#%2
+} by {
+	ld	%1,#%2
+	ld	%3,%4
+	; z80 peephole 137 removed load of #%2 into %1 since it's still there.
+} if notVolatile(%1), operandsNotRelated(%3 %1)
+
+replace restart {
+	ld	%1%2,#%1
+	ld	%3%4,#%1
+} by {
+	; generalized z80 peephole 138 used #%1 from hl%1%2 for load into de%3%4.
+	ld	%1%2,#%1
+	ld	%3,%1
+	ld	%4,%2
+} if canAssign(%3 %1) canAssign(%4 %2)
+
+replace restart {	
+	ld      sp,hl
+	ld      hl,#0x0002
+	add     hl,sp
+} by {
+	ld	sp, hl
+	inc	hl
+	inc	hl
+	; z80 peephole 139 replaced addition by increment.
+}
+
+replace restart {
+	ld	%1,a
+	or	a,a
+	jp	%3,%4
+	ld	a,%1
+} by {
+	ld	%1,a
+	or	a,a
+	jp	%3,%4
+	; z80 peephole 151 used value still in a instead of reloading from %1.
+}
+
+replace {
+	jp	%5
+	ret
+} by {
+	jp	%5
+	; z80 peephole 152 removed unused ret.
+}
+
+replace restart {
+	or	a,%1
+	jp	NZ,%2
+	xor	a,a
+	jp	%3
+} by {
+	or	a,%1
+	jp	NZ,%2
+	; z80 peephole 155 removed redundant zeroing of a (which has just been tested to be #0x00).
+	jp	%3
+}
+
+replace restart {
+	dec	hl
+	inc	hl
+} by {
+	; z80 peephole 155a removed inc hl / dec hl pair.
+}
+
+
+replace restart {
+	dec	hl
+	inc	bc
+	inc	hl
+} by {
+	inc	bc
+	; z80 peephole 155b removed inc hl / dec hl pair.
+}
+
+replace restart {
+	dec	hl
+	inc	de
+	inc	hl
+} by {
+	inc	de
+	; z80 peephole 155v removed inc hl / dec hl pair.
+}
+
+replace restart {
+	ld	%1,%2
+	ld	%2,%1
+} by {
+	ld	%1,%2
+	; modified z80 peephole 176 remove unnecessary load back
+} if notVolatile(%1), notVolatile(%2), notSame(%1 '(hl+)'), notSame(%1 '(hl-)'), notSame(%2 '(hl+)'), notSame(%2 '(hl-)')
