@@ -19,11 +19,14 @@ void initialize_tiles(const unsigned char * tiles, const unsigned char * empty);
 // redraws the scene
 void redraw_scene(scene_item_t * scene);
 
-// draws an item at XYZ
-void draw_item_XYZ(UBYTE x, UBYTE y, UBYTE z, UBYTE id);
+// draws an pattern at XYZ
+void draw_pattern_XYZ(UBYTE x, UBYTE y, UBYTE z, UBYTE id);
+
+// erase item 
+void erase_item(scene_item_t * item);
 
 // (re)places the item into scene
-void replace_item(scene_item_t * scene, scene_item_t * new_item);
+void replace_scene_item(scene_item_t * scene, scene_item_t * new_item);
 
 // copy pre-built scene
 UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest);

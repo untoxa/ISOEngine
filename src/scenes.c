@@ -68,12 +68,17 @@ void redraw_scene(scene_item_t * scene) {
     }
 }
 
-void draw_item_XYZ(UBYTE x, UBYTE y, UBYTE z, UBYTE id) {
+void draw_pattern_XYZ(UBYTE x, UBYTE y, UBYTE z, UBYTE id) {
     __put_map_x = to_x(x, y, z), __put_map_y = to_y(x, y, z), __put_map_id = id;
     put_map();
 }
 
-void replace_item(scene_item_t * scene, scene_item_t * new_item) {
+void erase_item(scene_item_t * item) {
+    __put_map_x = item->x, __put_map_y = item->y, __put_map_id = 0xffu;
+    put_map();
+}
+
+void replace_scene_item(scene_item_t * scene, scene_item_t * new_item) {
     static scene_item_t * item, * old, * replace;
     static UBYTE done_ins, done_rep;
     old = scene, item = scene->next;

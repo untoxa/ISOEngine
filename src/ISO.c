@@ -47,7 +47,7 @@ void main() {
     // initialize player and place it into the scene
     opx = px, opy = py, opz = pz;
     player.id = 0x09u, player.x = to_x(px, py, pz), player.y = to_y(px, py, pz), player.coords = to_coords(px, py, pz), player.next = 0;
-    replace_item(scene_items, &player);
+    replace_scene_item(scene_items, &player);
 
     // redraw the scene into the shadow buffer
     redraw_scene(scene_items);
@@ -96,9 +96,9 @@ void main() {
         // redraw
         if (redraw) {
             if (scene_count) {
+                erase_item(&player);
                 player.x = to_x(px, py, pz), player.y = to_y(px, py, pz), player.coords = to_coords(px, py, pz);
-                replace_item(scene_items, &player);
-                draw_item_XYZ(opx, opy, opz, 0xffu);
+                replace_scene_item(scene_items, &player);
                 redraw_scene(scene_items);
             }
             wait_vbl_done();

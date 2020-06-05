@@ -99,7 +99,7 @@ begin
             data:= allocmem(sz);
             lst.CommaText:= ReadString(sec_sys, 'rooms', '');
             if (lst.Count > 0) then begin
-              for i:= 0 to lst.count - 1 do
+              for i:= 0 to lst.count - 1 do begin
                 rum:= lst[i];
                 if LoadRoom(ini, rum, data) then begin
                   if (outfile.Size = 0) then begin
@@ -114,6 +114,7 @@ begin
                   Room2Source(rum, data, outfile);
                   writestr(outhdr, format('extern const scene_item_t %s[];'#$0d#$0a, [rum]));
                 end;
+              end;  
             end else writeln('ERROR: no rooms in map file');
           end else writeln('ERROR: invalid dimentions');
         end else writeln('ERROR: incorrect XYZ parameter');
