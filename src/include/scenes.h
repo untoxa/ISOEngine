@@ -13,6 +13,18 @@ typedef struct scene_item_t {
     struct scene_item_t * next;
 } scene_item_t;
 
+// ititialize tiles
+void initialize_tiles(const unsigned char * tiles, const unsigned char * empty);
+
+// redraws the scene
+void redraw_scene(scene_item_t * scene);
+
+// draws an item at XYZ
+void draw_item_XYZ(UBYTE x, UBYTE y, UBYTE z, UBYTE id);
+
+// (re)places the item into scene
+void replace_item(scene_item_t * scene, scene_item_t * new_item);
+
 // copy pre-built scene
 UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest);
 

@@ -23,3 +23,10 @@ UBYTE scene_count;
 DATA_0 scene_t collision_buf;
 
 DATA_0 UBYTE __end_marker;
+
+void clear_shadow_buffer() {
+    static unsigned char * shadow_ptr;
+    static UWORD sz;
+    sz = (viewport_height + 1) * viewport_width * 16, shadow_ptr = (unsigned char *)&shadow_buffer;
+    while(sz) *shadow_ptr++ = 0u, sz--;
+}

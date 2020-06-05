@@ -16,4 +16,6 @@ extern scene_t collision_buf;
 
 extern UBYTE scene_count;
 
+void clear_shadow_buffer();
+
 #endif
