@@ -79,9 +79,9 @@ void erase_item(scene_item_t * item) {
 }
 
 void replace_scene_item(scene_item_t * scene, scene_item_t * new_item) {
-    static scene_item_t * item, * old, * replace;
+    static scene_item_t * item, * replace;
     static UBYTE done_ins, done_rep;
-    old = scene, item = scene->next;
+    item = scene->next;
     done_ins = done_rep = 0;
     replace = new_item->next;
     while (item) {
@@ -90,16 +90,15 @@ void replace_scene_item(scene_item_t * scene, scene_item_t * new_item) {
             if (done_ins) return;
             done_rep = 1;
         }
-        if ((!done_ins) && (new_item->coords < item->coords)) {
-            old->next = new_item, new_item->next = item;
+        if ((!done_ins) && ((!(item->next)) || (item->next->coords > new_item->coords))) {
+            new_item->next = item->next;
+            item->next = new_item;
+            item = item->next;
             if (done_rep) return;
             done_ins = 1;
         }
-        old = item, item = item->next;
+        item = item->next;
     }
-    if (!done_ins) {
-        old->next = new_item, new_item->next = 0;
-    }    
 }
 
 UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
@@ -124,13 +123,18 @@ UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
     return count;
 }
 
-void scene_to_map(const scene_item_t * sour, scene_t * dest) {
-    static scene_item_t * src;
+void clear_map(scene_t * dest) {
     static unsigned char * tmp;
-    static UBYTE x, y, z;
     static UWORD sz;
     sz = sizeof(*dest), tmp = (unsigned char *)dest;
-    while (sz) *tmp++ = 0u, sz--;
+    while (sz) *tmp++ = 0u, sz--;    
+}
+
+void scene_to_map(const scene_item_t * sour, scene_t * dest) {
+    static scene_item_t * src;
+    static UBYTE x, y, z;
+    
+    clear_map(dest);
     
     src = (scene_item_t *)sour;
     while (src) {

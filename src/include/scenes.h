@@ -31,6 +31,9 @@ void replace_scene_item(scene_item_t * scene, scene_item_t * new_item);
 // copy pre-built scene
 UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest);
 
+// clear 3D map
+void clear_map(scene_t * dest);
+
 // decompress scene to 3D map
 void scene_to_map(const scene_item_t * sour, scene_t * dest);
 
