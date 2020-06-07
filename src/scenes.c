@@ -26,7 +26,7 @@ void put_map() {
         dy = (__put_map_y & 7u);
            
         data1 = (unsigned char *)shadow_rows[oy];
-        data1 += ((WORD)(__put_map_x - 1) << 4u);
+        data1 += ((WORD)(__put_map_x) << 4u);
         data1 += (dy << 1u);
         data2 = data1 + 16u;
         
@@ -61,6 +61,7 @@ void put_map() {
 void redraw_scene(scene_item_t * scene) {
     static scene_item_t * item;
     item = scene;
+    item = item->next; // skip zero item of the scene
     while (item) {
         __put_map_x = item->x, __put_map_y = item->y, __put_map_id = item->id;
         put_map();
@@ -108,6 +109,10 @@ UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
     src = (scene_item_t *)sour, dst = dest;
     count = 0u;
 
+    // zero item must always exist to simplify insertion of objects; it is not drawn
+    dst->id = 0xffu, dst->x = 0u, dst->y = 0u, dst->coords = 0u, dst->next = dst + 1;
+    dst++;
+
     while (src) {
         dst->id = src->id;
         dst->x = src->x;
@@ -139,7 +144,9 @@ void scene_to_map(const scene_item_t * sour, scene_t * dest) {
     src = (scene_item_t *)sour;
     while (src) {
         from_coords(src->coords, x, y, z);
-        (*dest)[x][z][y] = src->id + 1;
+        if ((x < max_scene_x) && (y < max_scene_y) && (z < max_scene_z)) {
+            (*dest)[x][z][y] = src->id + 1;
+        }
         src = src->next;
     }    
 }

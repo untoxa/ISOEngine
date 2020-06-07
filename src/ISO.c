@@ -31,6 +31,8 @@ const world_item_t world[4] = {
     {.N = 0,         .E = 0,         .S = &world[2],  .W = &world[1],  .room = room3 } 
 };
 
+#define try_change_room(dir, action) ((dir) ? (position = (dir), (action), 1u) : 0u)
+
 // set initial position in the global world
 const world_item_t * position = &world[0];
 
@@ -98,39 +100,19 @@ void main() {
             joy = joypad();
             if (joy & J_LEFT) {
                 if (!px) {
-                    // go west
-                    if (position->W) {
-                        position = position->W;
-                        px = (max_scene_x - 1u);
-                        room_changed = 1u;
-                    }
+                    room_changed = try_change_room(position->W, px = max_scene_x - 1u); // go west
                 } else px--;
             } else if (joy & J_RIGHT) {
                 if (px == (max_scene_x - 1u)) {
-                    // go east
-                    if (position->E) {
-                        position = position->E;
-                        px = 0u;
-                        room_changed = 1u;
-                    }                    
+                    room_changed = try_change_room(position->E, px = 0u); // go east
                 } else px++;
             } else if (joy & J_UP) {
                 if (py == (max_scene_y - 1u)) {
-                    // go north
-                    if (position->N) {
-                        position = position->N;
-                        py = 0u;
-                        room_changed = 1u;
-                    }                    
+                    room_changed = try_change_room(position->N, py = 0u); // go north
                 } else py++;
             } else if (joy & J_DOWN) {
                 if (!py) { 
-                    // go south
-                    if (position->S) {
-                        position = position->S;
-                        py = (max_scene_y - 1u);
-                        room_changed = 1u;
-                    }                    
+                    room_changed = try_change_room(position->S, py = max_scene_y - 1u); // go south
                 } else py--;
             }
         }
