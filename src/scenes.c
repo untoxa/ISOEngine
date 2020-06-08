@@ -9,6 +9,138 @@ void initialize_tiles(const unsigned char * tiles, const unsigned char * empty) 
     __tiles = tiles, __empty = empty;
 }
 
+UBYTE __dy, __counter;
+void __merge(unsigned char * dest, const unsigned char * spr, const unsigned char * mask) __naked {
+    dest; spr; mask;
+__asm
+        push    BC
+
+        lda     HL, 9(SP)
+        ld      D, (HL)
+        dec     HL
+        ld      E, (HL)
+        dec     HL
+        ld      B, (HL)
+        dec     HL
+        ld      C, (HL)
+        dec     HL
+        ld      A, (HL-)
+        ld      L, (HL)
+        ld      H, A
+
+        ;; now HL: data, DE: mask, BC: item 
+
+        ;; HL += ___dy << 1
+        ld      A, (#___dy)
+        add     A
+        add     L
+        ld      L, A
+        adc     H
+        sub     L
+        ld      H, A
+
+        ;; item is 2 tiles high
+        ld      A, #0x10
+        ld      (#___counter), A
+1$:        
+        ;; AND with item mask
+        ld      A, (DE)
+        and     (HL)
+        ld      (HL+), A
+        inc     DE
+        
+        ld      A, (DE)
+        and     (HL)
+        ld      (HL), A
+        inc     DE
+        
+        dec     HL
+        
+        ;; OR with item
+        ld      A, (BC)
+        or      (HL)
+        ld      (HL+), A
+        inc     BC
+        
+        ld      A, (BC)
+        or      (HL)
+        ld      (HL+), A
+        inc     BC        
+        
+        ;; check moving to the next tile by Y
+        ld      A, (#___dy)
+        inc     A
+        cp      #8
+        jr      NZ, 2$
+        
+        push    DE
+
+        ;; move to next tile by Y
+        ld      DE, #((viewport_width - 1) * 16)
+        add     HL, DE
+                
+        ;; check shadow buffer boundaries: HL < shadow_buffer + sizeof(shadow_buffer)        
+        ld      A, #>((_shadow_buffer + 0x0ea0)) 
+        cp      H
+        jr      C, 3$
+        jr      NZ, 4$
+   
+        ld      A, #<((_shadow_buffer + 0x0ea0))
+        cp      L
+        jr      C, 3$
+   
+4$:        
+        pop     DE        
+        xor     A
+        
+2$:     ld      (#___dy), A
+                
+        ld      A, (#___counter)
+        dec     A
+        ld      (#___counter), A
+        jr      NZ, 1$
+        
+        pop     BC
+        
+        ret
+        
+3$:     pop     DE
+        pop     BC
+        ret
+        
+__endasm;
+}
+
+void put_map() { 
+    static unsigned char * data, * spr, * mask, * limit;
+        
+    if (__put_map_y < ((viewport_height - 1) * 8)) {       
+        
+        if (__put_map_id != 0xffu) {
+            spr = (unsigned char *)&__tiles[(int)__put_map_id << 7u], mask = spr + 0x40u;
+        }  else {
+            spr = mask = (unsigned char *)__empty;
+        }
+                          
+        data = (unsigned char *)shadow_rows[(__put_map_y >> 3u)];
+        data += ((WORD)(__put_map_x) << 4u);
+        
+        if (data > shadow_buffer_limit) return;
+        
+        __dy = (__put_map_y & 7u);
+        __merge(data, spr, mask);
+        
+        // next column of 2x2 tile item and mask
+        spr += 0x20u, mask += 0x20u;
+        
+        __dy = (__put_map_y & 7u);
+        __merge(data + 0x10u, spr, mask);
+
+    }
+}
+
+/*
+// old pure C put_map() for reference
 void put_map() { 
     static UBYTE i, oy, dy;
     static unsigned char * data1, * data2, * spr, * mask, * limit;
@@ -57,6 +189,7 @@ void put_map() {
         }
     }
 }
+*/
 
 void redraw_scene(scene_item_t * scene) {
     static scene_item_t * item;
