@@ -43,6 +43,7 @@ UBYTE opx, opy, opz;
 UBYTE joy, redraw, falling, room_changed;
 static UBYTE tmp;
 static scene_item_t player;
+static UBYTE scene_count;
 
 void main() {
     SWITCH_RAM_MBC1(0);
@@ -58,7 +59,7 @@ void main() {
 
     // initialize the player
     opx = px, opy = py, opz = pz;
-    player.id = 0x09u, player.x = to_x(px, py, pz), player.y = to_y(px, py, pz), player.coords = to_coords(px, py, pz), player.next = 0;
+    player.id = 0x09u, player.x = to_x(px, py, pz), player.y = to_y(px, py, pz), player.n = 0u, player.coords = to_coords(px, py, pz), player.next = 0;
 
     // copy scene to RAM
     scene_count = copy_scene(position->room, scene_items);
@@ -135,7 +136,7 @@ void main() {
             scene_count = copy_scene(position->room, scene_items);
             if (scene_count) scene_to_map(scene_items, &collision_buf); else clear_map(&collision_buf);                
             // player is absent in the new scene
-            player.next = 0, redraw = 1u;
+            player.n = 0u, player.next = 0, redraw = 1u;
         }
         // redraw
         if (redraw) {

@@ -17,7 +17,7 @@ const unsigned char * const shadow_rows[] = {
 
 // scene in RAM1
 DATA_0 scene_item_t scene_items[255];
-UBYTE scene_count;
+UBYTE scene_items_count;
 
 // collision buffer in RAM1
 DATA_0 scene_t collision_buf;

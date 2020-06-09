@@ -12,6 +12,12 @@
 @set DEBUGGING=0
 @set OPTIMIZE=1
 
+@if %1. == debug. @set DEBUGGING=1
+@if %DEBUGGING%==1 @echo Debugging mode ON
+ 
+@if %1. == profile. @set PROFILING=1 
+@if %PROFILING%==1 @echo Profilig mode ON
+
 @set CFLAGS=-mgbz80 --no-std-crt0 -I %GBDK%include -I %GBDK%include\asm -I %SRC%include -I %OBJ% -c
 @set CFLAGS=%CFLAGS% --max-allocs-per-node 50000
 @if %OPTIMIZE%==1 @set CFLAGS=%CFLAGS% --peep-file peephole\gbz80.rul

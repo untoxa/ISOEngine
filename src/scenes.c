@@ -88,6 +88,7 @@ __asm
         ld      A, #<((_shadow_buffer + 0x0ea0))
         cp      L
         jr      C, 3$
+        jr      Z, 3$
    
 4$:        
         pop     DE        
@@ -139,8 +140,56 @@ void put_map() {
     }
 }
 
+void redraw_scene(scene_item_t * scene) {
+    scene;
+__asm
+        lda     HL, 2(SP)
+        
+        ;; HL = scene->next;
+        ld      A, (HL+)
+        ld      H, (HL)
+        
+        ld      E, #6
+        add     E
+        ld      L, A
+        adc     H
+        sub     L
+        ld      H, A
+        
+        ld      A, (HL+)
+        ld      H, (HL)
+        ld      L, A
+        
+1$:     
+        or      H
+        jr      Z, 2$
+        
+        ld      A, (HL+)
+        ld      (#___put_map_id), A
+        ld      A, (HL+)
+        ld      (#___put_map_x), A
+        ld      A, (HL+)
+        ld      (#___put_map_y), A
+        
+        push    HL
+        call    _put_map
+        pop     HL
+        
+        inc     HL
+        inc     HL
+        inc     HL
+
+        ld      A, (HL+)
+        ld      H, (HL)
+        ld      L, A            ; HL = HL->next;
+        
+        jr      1$
+2$:      
+__endasm; 
+}
+
 /*
-// old pure C put_map() for reference
+// old pure C for reference
 void put_map() { 
     static UBYTE i, oy, dy;
     static unsigned char * data1, * data2, * spr, * mask, * limit;
@@ -189,7 +238,6 @@ void put_map() {
         }
     }
 }
-*/
 
 void redraw_scene(scene_item_t * scene) {
     static scene_item_t * item;
@@ -201,38 +249,41 @@ void redraw_scene(scene_item_t * scene) {
         item = item->next;
     }
 }
+*/
 
 void draw_pattern_XYZ(UBYTE x, UBYTE y, UBYTE z, UBYTE id) {
-    __put_map_x = to_x(x, y, z), __put_map_y = to_y(x, y, z), __put_map_id = id;
+    __put_map_id = id, __put_map_x = to_x(x, y, z), __put_map_y = to_y(x, y, z);
     put_map();
 }
 
 void erase_item(scene_item_t * item) {
-    __put_map_x = item->x, __put_map_y = item->y, __put_map_id = 0xffu;
+    __put_map_id = 0xffu, __put_map_x = item->x, __put_map_y = item->y;
     put_map();
 }
 
 void replace_scene_item(scene_item_t * scene, scene_item_t * new_item) {
     static scene_item_t * item, * replace;
-    static UBYTE done_ins, done_rep;
-    item = scene->next;
-    done_ins = done_rep = 0;
-    replace = new_item->next;
-    while (item) {
-        if (item->next == new_item) {
-            item->next = replace;
-            if (done_ins) return;
-            done_rep = 1;
-        }
-        if ((!done_ins) && ((!(item->next)) || (item->next->coords > new_item->coords))) {
-            new_item->next = item->next;
-            item->next = new_item;
-            item = item->next;
-            if (done_rep) return;
-            done_ins = 1;
-        }
-        item = item->next;
+    static int l, h, i, c;
+    if (new_item->n) {
+        item = scene;
+        item += new_item->n;
+        item->next = new_item->next;
     }
+
+    item = scene + 1;
+    l = 0u, h = scene_items_count - 1u;
+    while (l <= h) {
+        i = (l + h) >> 1u;
+        c = (int)((item + i)->coords) - (int)new_item->coords;
+        if (c < 0) l = i + 1u; else h = i - 1u;
+    }
+
+    if (c > 0) {
+        if (l) item += l - 1; else item--;
+    } else item += l;
+
+    new_item->next = item->next, new_item->n = item->n;
+    item->next = new_item;
 }
 
 UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
@@ -243,7 +294,7 @@ UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
     count = 0u;
 
     // zero item must always exist to simplify insertion of objects; it is not drawn
-    dst->id = 0xffu, dst->x = 0u, dst->y = 0u, dst->coords = 0u, dst->next = dst + 1;
+    dst->id = 0xffu, dst->x = 0u, dst->y = 0u, dst->n = 0u, dst->coords = 0u, dst->next = dst + 1;
     dst++;
 
     while (src) {
@@ -253,11 +304,13 @@ UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
         dst->coords = src->coords;
         src = src->next;
         count++;
+        dst->n = count;
         if (count == 255u) src = 0;
         if (src) dst->next = dst + 1; else dst->next = 0;
         dst++;
     }
 
+    scene_items_count = count;
     return count;
 }
 

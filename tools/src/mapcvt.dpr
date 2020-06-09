@@ -66,14 +66,14 @@ begin
       for k:= 0 to z - 1 do begin
         id:= get(i, j, k);
         if (id <> 0) then begin
-          writestr(res, format('{%d, to_x(%d, %d, %d), to_y(%d, %d, %d), to_coords(%d, %d, %d)', [id - 1, i,j,k, i,j,k, i,j,k]));
-          tmp:= format(', &%s[%d]},'#$0d#$0a, [aroom, cnt]);
+          writestr(res, format('{.id=%d, .x=to_x(%d, %d, %d), .y=to_y(%d, %d, %d), .coords=to_coords(%d, %d, %d)', [id - 1, i,j,k, i,j,k, i,j,k]));
+          tmp:= format(', .next=&%s[%d]},'#$0d#$0a, [aroom, cnt]);
           writestr(res, tmp);
           inc(cnt);
         end;
       end;
   res.Size:= res.Size - length(tmp);
-  writestr(res, ', 0}'#$0d#$0a'};'#$0d#$0a);
+  writestr(res, ', .next=0}'#$0d#$0a'};'#$0d#$0a);
 end;
 
 begin

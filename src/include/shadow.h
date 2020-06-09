@@ -12,9 +12,8 @@ extern unsigned char shadow_buffer[];
 extern const unsigned char * const shadow_rows[];
 
 extern scene_item_t scene_items[255];
+extern UBYTE scene_items_count;
 extern scene_t collision_buf;
-
-extern UBYTE scene_count;
 
 void clear_shadow_buffer();
 

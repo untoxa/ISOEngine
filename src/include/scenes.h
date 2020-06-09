@@ -7,11 +7,15 @@
 
 typedef unsigned char scene_t[max_scene_x][max_scene_z][max_scene_y];
 
+// scene item type
+// used in internal asm functions, do not edit
 typedef struct scene_item_t {
-    UBYTE id, x, y;
+    UBYTE id, x, y, n;
     UWORD coords;
     struct scene_item_t * next;
 } scene_item_t;
+// sizeof(scene_item_t) must be 8
+check_size(scene_item_t, 8);
 
 // ititialize tiles
 void initialize_tiles(const unsigned char * tiles, const unsigned char * empty);
