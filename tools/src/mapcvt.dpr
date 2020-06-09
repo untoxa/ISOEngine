@@ -2,18 +2,77 @@
 
 uses  windows, classes, sysutils, inifiles, math;
 
-const sec_sys  = 'system';
-var   data     : pAnsiChar;
-      voc, rum : ansistring;
-      x,y,z    : longint;
-      lst      : tStringList;
-      i, sz    : longint;
-      ini      : tIniFile;
-      outfile  : tMemoryStream;
-      outhdr   : tMemoryStream;
-      bank     : longint;
-      outname  : ansistring;
-      outpath  : ansistring;
+const sec_sys      = 'system';
+var   data         : pAnsiChar;
+      voc, rum     : ansistring;
+      x,y,z        : longint;
+      lst          : tStringList;
+      rooms, world : tStringList;
+      i, sz        : longint;
+      ini          : tIniFile;
+      outfile      : tMemoryStream;
+      outhdr       : tMemoryStream;
+      bank         : longint;
+      outname      : ansistring;
+      outpath      : ansistring;
+
+function LoadWorld(aini: tIniFile; const aworldname: ansistring): boolean;
+  function GetRoomById(aid: ansichar): ansistring;
+  var idx : longint;
+  begin
+    idx:= rooms.IndexOfObject(pointer(aid));
+    if (idx >= 0) then result:= rooms[idx] else setlength(result, 0);
+  end;
+  procedure AppendProperty(idx: longint; const aprop: ansistring);
+  begin
+    if (idx >= 0) then world.strings[idx]:= format('%s, %s', [world.strings[idx], aprop]);
+  end;
+  function SetRoomProperty(x, y: longint; const aprop: ansistring; aforce: boolean): longint;
+  var id : longint;
+  begin
+    result:= -1;
+    if (x >= 0) and (y >= 0) then begin
+      id:= ((y and $ff) shl 8) or (x and $ff);
+      result:= world.IndexOfObject(pointer(id));
+      if (result >= 0) then begin
+        AppendProperty(result, aprop);
+      end else begin
+        if aforce then result:= world.AddObject(aprop, pointer(id));
+      end;
+    end;
+  end;
+  function GetWorldIndex(x, y: longint): longint;
+  var id: longint;
+  begin
+    result:= -1;
+    if (x >= 0) and (y >= 0) then begin
+      id:= ((y and $ff) shl 8) or (x and $ff);
+      result:= world.IndexOfObject(pointer(id));
+    end;
+  end;
+var x, y, idx, idx2 : longint;
+    row, rum        : ansistring;
+begin
+  result:= false;
+  if length(aworldname) > 0 then begin
+    for y:= 0 to aini.ReadInteger(aworldname, 'rows', 0) - 1 do begin
+      row:= aini.ReadString(aworldname, inttostr(y), '');
+      for x:= 0 to length(row) - 1 do begin
+        rum:= GetRoomById(row[x + 1]);
+        if length(rum) > 0 then begin
+          idx:= SetRoomProperty(x, y, format('.room=%s', [rum]), true);
+
+          SetRoomProperty(x - 1, y, format('.N=&%s[%d]', [aworldname, idx]), false);
+          idx2:= GetWorldIndex(x - 1, y); if (idx2 >= 0) then SetRoomProperty(x, y, format('.S=&%s[%d]', [aworldname, idx2]), false);
+
+          SetRoomProperty(x, y - 1, format('.E=&%s[%d]', [aworldname, idx]), false);
+          idx2:= GetWorldIndex(x, y - 1); if (idx2 >= 0) then SetRoomProperty(x, y, format('.W=&%s[%d]', [aworldname, idx2]), false);
+        end;
+      end;
+    end;
+    result:= true;
+  end;
+end;
 
 function LoadRoom(aini: tIniFile; const aroom: ansistring; adata: pAnsiChar): boolean;
 var lvl     : tStringList;
@@ -24,7 +83,9 @@ begin
   fillchar(data^, sz, 0);
   lvl:= tStringList.create;
   try
-    lvl.CommaText:= aini.ReadString(sec_sys, aroom, '');
+    tmp:= aini.ReadString(aroom, 'id', '');
+    if assigned(rooms) and (length(tmp) > 0) then rooms.AddObject(aroom, pointer(byte(tmp[1])));
+    lvl.CommaText:= aini.ReadString(aroom, 'layers', '');
     if (lvl.Count = z) then begin
       for i:= 0 to z - 1 do begin
         for j:= 0 to x - 1 do begin
@@ -83,6 +144,9 @@ begin
     outpath:= extractfilepath(paramstr(2));
     outfile:= tMemoryStream.create;
     outhdr:= tMemoryStream.create;
+    world:= tStringList.Create;
+    rooms:= tStringList.Create;
+    rooms.Sorted:= True; rooms.Duplicates:= dupIgnore;
     lst:= tStringList.Create;
     try
       ini:= tIniFile.Create(paramstr(1));
@@ -114,13 +178,28 @@ begin
                   Room2Source(rum, data, outfile);
                   writestr(outhdr, format('extern const scene_item_t %s[];'#$0d#$0a, [rum]));
                 end;
-              end;  
+              end;
             end else writeln('ERROR: no rooms in map file');
           end else writeln('ERROR: invalid dimentions');
         end else writeln('ERROR: incorrect XYZ parameter');
+
+        rum:= ReadString(sec_sys, 'world', '');
+        if LoadWorld(ini, rum) then begin
+          if world.count > 0 then begin
+            // world
+            writestr(outfile, format(#$0d#$0a'const world_item_t %s[] = {'#$0d#$0a, [rum]));
+            for i:= 0 to world.count - 1 do writestr(outfile, format('{%s}, '#$0d#$0a, [world[i]]));
+            writestr(outfile, '};'#$0d#$0a);
+            // header
+            writestr(outhdr, format('extern const world_item_t %s[];'#$0d#$0a, [rum]));
+          end;
+        end;
+
       finally free; end;
     finally
       freeandnil(lst);
+      freeandnil(rooms);
+      freeandnil(world);
       if (outfile.Size > 0) then outfile.SaveToFile(format('%s%s.c', [outpath, outname]));
       freeandnil(outfile);
       if (outhdr.Size > 0) then begin

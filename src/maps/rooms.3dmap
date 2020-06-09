@@ -3,21 +3,81 @@
 ; #pragma bank <bank>
 bank=1
 
-; 3D Scene dimentions
+; 3D Scene dimentions (don't edit unless you know what are you doing)
 XYZ=9,9,4
 
 ; vocabulary: index of the character is an id of an element
 voc=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ
 
 ; name of the list in the source
-rooms=room0,room1,room2,room3
+rooms=r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,rA
 
+; name of the section which contains the global world map
+world=world
+
+[world]
+; number of rows
+rows=4
+; 2D global room map, each char is an ID of the room, unknown id means NULL room
+
+;      W
+;      ^
+;      |
+; S <-- --> N
+;      |
+;      v
+;      E
+
+0=01..
+1=2345
+2=.A.6
+3=.987
+
+[r0]
+; id in the global world map (single char)
+id=0
 ; list of section names that contain 2D slices
-room0=r0l0,r0l1,r0l2,r0l3
+layers=r0l0,r0l1,r0l2,r0l3
 
-room1=r1l0,r1l1,r1l2,r1l3
-room2=r2l0,air,r2l2,air
-room3=r3l0,air,air,air
+[r1]
+id=1
+layers=r1l0,r1l1,r1l2,r1l3
+
+[r2]
+id=2
+layers=r2l0,air,r2l2,air
+
+[r3]
+id=3
+layers=r3l0,air,air,air
+
+[r4]
+id=4
+layers=r4l0,air,air,air
+
+[r5]
+id=5
+layers=r5l0,air,air,air
+
+[r6]
+id=6
+layers=r6l0,air,air,air
+
+[r7]
+id=7
+layers=r7l0,air,air,air
+
+[r8]
+id=8
+layers=r8l0,air,air,air
+
+[r9]
+id=9
+layers=r9l0,air,air,air
+
+[rA]
+id=A
+layers=rAl0,air,air,air
 
 [r0l0]
 0=999010992
@@ -70,7 +130,7 @@ room3=r3l0,air,air,air
 5=410101010
 6=101014101
 7=610101010
-8=101010101
+8=101010106
 [r1l1]
 0=300000000
 1=000000000
@@ -112,7 +172,7 @@ room3=r3l0,air,air,air
 5=010676010
 6=101016101
 7=010101010
-8=101010101
+8=101010106
 [r2l2]
 0=008000000
 1=000000000
@@ -126,15 +186,88 @@ room3=r3l0,air,air,air
 
 
 [r3l0]
-0=101010101
-1=010101010
-2=101010101
+0=101010106
+1=010101016
+2=101010106
 3=010101010
 4=101010101
 5=010101010
-6=101010101
-7=010101010
-8=101010101
+6=101010106
+7=010101016
+8=666010666
+
+
+[r4l0]
+0=000000000
+1=000000000
+2=666666666
+3=010101010
+4=101010101
+5=010101010
+6=666666666
+7=000000000
+8=000000000
+[r5l0]
+0=000000000
+1=000000000
+2=666666600
+3=010101600
+4=101010600
+5=010101600
+6=666010600
+7=006101600
+8=006010600
+[r6l0]
+0=006010600
+1=006101600
+2=006010600
+3=006101600
+4=006010600
+5=006101600
+6=006010600
+7=006101600
+8=006010600
+[r7l0]
+0=006010600
+1=006101600
+2=666010600
+3=010101600
+4=101010600
+5=010101600
+6=666666600
+7=000000000
+8=000000000
+[r8l0]
+0=000000000
+1=000000000
+2=666606666
+3=010666010
+4=101010101
+5=010666010
+6=666606666
+7=000000000
+8=000000000
+[r9l0]
+0=006010600
+1=006101600
+2=006010666
+3=006101010
+4=006010101
+5=006101010
+6=006666666
+7=000000000
+8=000000000
+[rAl0]
+0=006010600
+1=006101600
+2=006010600
+3=066101660
+4=061010160
+5=066101660
+6=006010600
+7=006101600
+8=006010600
+
 
 ; general purpose 2D slices
 [floor]

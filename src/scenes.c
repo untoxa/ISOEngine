@@ -160,11 +160,15 @@ __asm
         ld      H, (HL)
         ld      L, A
         
+        dec     E               ; E == 5
 1$:     
         or      H
         jr      Z, 2$
         
         ld      A, (HL+)
+        cp      #0xc0           ; skip all items with ID > 0xc0 
+        jr      NC, 3$
+        
         ld      (#___put_map_id), A
         ld      A, (HL+)
         ld      (#___put_map_x), A
@@ -179,11 +183,19 @@ __asm
         inc     HL
         inc     HL
 
+4$:
         ld      A, (HL+)
         ld      H, (HL)
         ld      L, A            ; HL = HL->next;
         
         jr      1$
+        
+3$:     ld      A, L
+        add     E
+        ld      L, A
+        adc     H
+        sub     L               ; HL = HL + 5
+        jr      4$
 2$:      
 __endasm; 
 }
@@ -266,10 +278,10 @@ void replace_scene_item(scene_item_t * scene, scene_item_t * new_item) {
     static int l, h, i, c;
     if (new_item->n) {
         item = scene;
-        item += new_item->n;
+        item += (new_item->n - 1);
         item->next = new_item->next;
     }
-
+    // bsearch 
     item = scene + 1;
     l = 0u, h = scene_items_count - 1u;
     while (l <= h) {
@@ -277,10 +289,14 @@ void replace_scene_item(scene_item_t * scene, scene_item_t * new_item) {
         c = (int)((item + i)->coords) - (int)new_item->coords;
         if (c < 0) l = i + 1u; else h = i - 1u;
     }
-
+    
     if (c > 0) {
+        // if not found then correct the place for item insertion
         if (l) item += l - 1; else item--;
-    } else item += l;
+    } else {
+        if (l == scene_items_count) l--;
+        item += l;
+    }
 
     new_item->next = item->next, new_item->n = item->n;
     item->next = new_item;
@@ -288,13 +304,13 @@ void replace_scene_item(scene_item_t * scene, scene_item_t * new_item) {
 
 UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
     static scene_item_t * src, * dst;
-    UBYTE count;
+    UBYTE count, id = 1u;
 
     src = (scene_item_t *)sour, dst = dest;
     count = 0u;
 
     // zero item must always exist to simplify insertion of objects; it is not drawn
-    dst->id = 0xffu, dst->x = 0u, dst->y = 0u, dst->n = 0u, dst->coords = 0u, dst->next = dst + 1;
+    dst->id = 0xffu, dst->x = 0u, dst->y = 0u, dst->n = id, dst->coords = 0u, dst->next = dst + 1;
     dst++;
 
     while (src) {
@@ -303,9 +319,9 @@ UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
         dst->y = src->y;
         dst->coords = src->coords;
         src = src->next;
+        dst->n = ++id;
         count++;
-        dst->n = count;
-        if (count == 255u) src = 0;
+        if (count == 254u) src = 0;
         if (src) dst->next = dst + 1; else dst->next = 0;
         dst++;
     }

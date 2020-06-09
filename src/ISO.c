@@ -18,19 +18,6 @@ char buf[0x20];
 #include "scene_resources.h"
 #include "misc_resources.h"
 
-typedef struct world_item_t {
-    struct world_item_t * N, * E, * S, * W;
-    struct scene_item_t * room;
-} world_item_t;
-
-// global world
-const world_item_t world[4] = { 
-    {.N = &world[1], .E = &world[2], .S = 0,          .W = 0,          .room = room0 },
-    {.N = 0,         .E = &world[3], .S = &world[0],  .W = 0,          .room = room1 },
-    {.N = &world[3], .E = 0,         .S = 0,          .W = &world[0],  .room = room2 },
-    {.N = 0,         .E = 0,         .S = &world[2],  .W = &world[1],  .room = room3 } 
-};
-
 #define try_change_room(dir, action) ((dir) ? (position = (dir), (action), 1u) : 0u)
 
 // set initial position in the global world

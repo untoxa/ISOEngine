@@ -17,6 +17,12 @@ typedef struct scene_item_t {
 // sizeof(scene_item_t) must be 8
 check_size(scene_item_t, 8);
 
+// global world item
+typedef struct world_item_t {
+    struct world_item_t * N, * E, * S, * W;
+    struct scene_item_t * room;
+} world_item_t;
+
 // ititialize tiles
 void initialize_tiles(const unsigned char * tiles, const unsigned char * empty);
 
