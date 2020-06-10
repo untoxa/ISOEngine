@@ -4,8 +4,6 @@
 #include "shadow.h"
 #include "mapping.h"
 
-const tiledesc_t * used_tile_range;
-
 const unsigned char viewport_map[] = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
     0x00,0x00,0x00,0x00,0x00,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x00,0x00,0x00,0x00,0x00,
@@ -26,7 +24,6 @@ void set_view_port(UBYTE x, UBYTE y) __banked {
     set_bkg_tiles(x, y, viewport_width, viewport_height, viewport_map);
 }
 
-
 // constant structures declared just before __nonbanked functions are nonbanked too
 const tiledesc_t used_tiles[] = {
     { 4, &shadow_buffer[                           7*16] },
@@ -45,12 +42,53 @@ const tiledesc_t used_tiles[] = {
 };
 
 void copy_tiles() __nonbanked {
+__asm
+        push    BC
+
+        ld      HL, #_used_tiles
+        ld      D, #viewport_height
+        ld      E, #1
+1$:
+        ld      A, (HL+)
+        ld      C, (HL)
+        inc     HL
+        ld      B, (HL)
+        inc     HL
+        
+        push    HL
+        push    DE
+        push    AF
+        
+        push    BC
+        ld      D, A
+        push    DE
+        call    _set_bkg_data
+        add     SP, #4
+        
+        pop     AF
+        pop     DE
+        pop     HL
+        add     E
+        ld      E, A
+
+        dec     D
+        jr      NZ, 1$
+
+        pop     BC
+__endasm;
+}
+
+/*
+// old pure C functions for reference
+void copy_tiles() __nonbanked {
+    static const tiledesc_t * used_tile_range;
     static UBYTE i, idx;
     idx = 1;
     used_tile_range = used_tiles;
     for (i = 0; i < viewport_height; i++) {
-        set_bkg_data(idx, used_tile_range->count, used_tile_range-> data);
+        set_bkg_data(idx, used_tile_range->count, used_tile_range->data);
         idx += used_tile_range->count;
         used_tile_range++;
     }
 }
+*/

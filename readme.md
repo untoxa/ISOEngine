@@ -3,7 +3,7 @@
 This is a simple engine that allows to make "pseudo-3D" games for Nintendo Game Boy using
 GBDK-2020.
 
-![screenshot](/screenshot.png)
+![screenshot](/screenshot.gif)
 
 You need the latest version of GBDK-2020 (3.2 for now) to compile this example. I'm also
 using the tool from ZGB engine to convert the "Gameboy Tile Designer" tiles into the source 

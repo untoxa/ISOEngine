@@ -10,24 +10,8 @@ void initialize_tiles(const unsigned char * tiles, const unsigned char * empty) 
 }
 
 UBYTE __dy, __counter;
-void __merge(unsigned char * dest, const unsigned char * spr, const unsigned char * mask) __naked {
-    dest; spr; mask;
+void __merge() __naked {
 __asm
-        push    BC
-
-        lda     HL, 9(SP)
-        ld      D, (HL)
-        dec     HL
-        ld      E, (HL)
-        dec     HL
-        ld      B, (HL)
-        dec     HL
-        ld      C, (HL)
-        dec     HL
-        ld      A, (HL-)
-        ld      L, (HL)
-        ld      H, A
-
         ;; now HL: data, DE: mask, BC: item 
 
         ;; HL += ___dy << 1
@@ -80,12 +64,12 @@ __asm
         add     HL, DE
                 
         ;; check shadow buffer boundaries: HL < shadow_buffer + sizeof(shadow_buffer)        
-        ld      A, #>((_shadow_buffer + 0x0ea0)) 
+        ld      A, #>((_shadow_buffer + (viewport_height * viewport_width * 16))) 
         cp      H
         jr      C, 3$
         jr      NZ, 4$
    
-        ld      A, #<((_shadow_buffer + 0x0ea0))
+        ld      A, #<((_shadow_buffer + (viewport_height * viewport_width * 16)))
         cp      L
         jr      C, 3$
         jr      Z, 3$
@@ -100,44 +84,149 @@ __asm
         dec     A
         ld      (#___counter), A
         jr      NZ, 1$
-        
-        pop     BC
-        
         ret
         
 3$:     pop     DE
-        pop     BC
         ret
         
 __endasm;
 }
 
 void put_map() { 
-    static unsigned char * data, * spr, * mask, * limit;
-        
-    if (__put_map_y < ((viewport_height - 1) * 8)) {       
-        
-        if (__put_map_id != 0xffu) {
-            spr = (unsigned char *)&__tiles[(int)__put_map_id << 7u], mask = spr + 0x40u;
-        }  else {
-            spr = mask = (unsigned char *)__empty;
-        }
-                          
-        data = (unsigned char *)shadow_rows[(__put_map_y >> 3u)];
-        data += ((WORD)(__put_map_x) << 4u);
-        
-        if (data > shadow_buffer_limit) return;
-        
-        __dy = (__put_map_y & 7u);
-        __merge(data, spr, mask);
-        
-        // next column of 2x2 tile item and mask
-        spr += 0x20u, mask += 0x20u;
-        
-        __dy = (__put_map_y & 7u);
-        __merge(data + 0x10u, spr, mask);
+__asm
+        ld      A, (#___put_map_y)
+        cp      #((viewport_height - 1) * 8)
+        jp      NC, 6$
 
-    }
+        push    BC
+
+        ld      A, (#___put_map_id)
+        inc     A
+        jr      NZ, 1$
+
+        ld      HL, #___empty
+        ld      A, (HL+)
+        ld      H, (HL)
+        ld      L, A
+        
+        ld      D, H
+        ld      E, L
+        ld      B, H
+        ld      C, L
+        jr      2$
+1$:
+        ld      HL, #___tiles
+        ld      A, (HL+)
+        ld      H, (HL)
+        ld      L, A
+
+        xor     A
+        ld      E, A
+        ld      A, (#___put_map_id)
+        srl     A
+        rr      E
+        ld      D, A
+       
+        add     HL, DE
+        ld      C, L
+        ld      B, H                ; BC: spr = (unsigned char *)&__tiles[(int)__put_map_id << 7u]
+        ld      DE, #0x040
+        add     HL, DE
+        ld      E, L
+        ld      D, H                ; DE: mask = spr + 0x40u;
+2$:
+        
+        push    BC
+
+        ld      HL, #___put_map_x
+        ld      A, (hl)
+        swap    A
+        ld      C, A
+        and     A, #0x0f
+        ld      B, A
+        ld      A, C
+        and     A, #0xf0
+        ld      C, A
+
+        ld      HL, #_shadow_rows
+
+        ld      A, (#___put_map_y)        
+        srl     A
+        srl     A
+        and     A, #0xfe
+        
+        add     L
+        ld      L, A
+        adc     H
+        sub     L
+        ld      H, A
+        
+        ld      A, (HL+)
+        ld      H,(HL)
+        ld      L, A
+        
+        add     HL, BC
+
+        ld      BC, #(_shadow_buffer + (viewport_height * viewport_width * 16))
+        ld      A, B
+        cp      H
+        jr      C, 3$
+        jr      NZ, 4$
+        ld      A, C
+        cp      L
+        jr      C, 3$
+4$:
+        pop     BC
+        
+        push    DE
+        push    BC
+        push    HL
+
+        ld      A, (#___put_map_y)
+        and     A, #0x07
+        ld      (#___dy), A
+        
+        call    ___merge
+        
+        pop     HL
+        ld      A, #0x10
+        add     L
+        ld      L, A
+        adc     H
+        sub     L
+        ld      H, A        
+        
+        pop     BC
+        ld      A, #0x20
+        add     C
+        ld      C, A
+        adc     B
+        sub     C
+        ld      B, A
+        
+        pop     DE
+        ld      A, #0x20
+        add     E
+        ld      E, A
+        adc     D
+        sub     E
+        ld      D, A
+        
+        ld      A, (#___put_map_y)
+        and     A, #0x07
+        ld      (#___dy), A
+        
+        call    ___merge
+        
+        jr      5$
+        
+3$:
+        pop     BC
+
+5$:
+        pop     BC
+6$:                
+__endasm;
 }
 
 void redraw_scene(scene_item_t * scene) {
@@ -201,7 +290,7 @@ __endasm;
 }
 
 /*
-// old pure C for reference
+// old pure C functions for reference
 void put_map() { 
     static UBYTE i, oy, dy;
     static unsigned char * data1, * data2, * spr, * mask, * limit;
