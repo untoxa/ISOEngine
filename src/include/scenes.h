@@ -29,8 +29,8 @@ void initialize_tiles(const unsigned char * tiles, const unsigned char * empty);
 // redraws the scene
 void redraw_scene(scene_item_t * scene);
 
-// draws an pattern at XYZ
-void draw_pattern_XYZ(UBYTE x, UBYTE y, UBYTE z, UBYTE id);
+// draws masked bitmap to x, y
+void draw_bitmap_XY(UBYTE x, UBYTE y, const unsigned char * spr, const unsigned char * mask);
 
 // erase item 
 void erase_item(scene_item_t * item);

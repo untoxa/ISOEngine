@@ -3,7 +3,7 @@
 
 // pointer to tile resources
 static const unsigned char * __tiles, *__empty;
-static UBYTE __put_map_x, __put_map_y, __put_map_id;
+static UBYTE __put_map_x, __put_map_y; 
 
 void initialize_tiles(const unsigned char * tiles, const unsigned char * empty) {
     __tiles = tiles, __empty = empty;
@@ -92,49 +92,13 @@ __asm
 __endasm;
 }
 
-void put_map() { 
+void __put_map() __naked { 
 __asm
+        ;; now DE: mask, BC: item 
+
         ld      A, (#___put_map_y)
         cp      #((viewport_height - 1) * 8)
-        jp      NC, 6$
-
-        push    BC
-
-        ld      A, (#___put_map_id)
-        inc     A
-        jr      NZ, 1$
-
-        ld      HL, #___empty
-        ld      A, (HL+)
-        ld      H, (HL)
-        ld      L, A
-        
-        ld      D, H
-        ld      E, L
-        ld      B, H
-        ld      C, L
-        jr      2$
-1$:
-        ld      HL, #___tiles
-        ld      A, (HL+)
-        ld      H, (HL)
-        ld      L, A
-
-        xor     A
-        ld      E, A
-        ld      A, (#___put_map_id)
-        srl     A
-        rr      E
-        ld      D, A
-       
-        add     HL, DE
-        ld      C, L
-        ld      B, H                ; BC: spr = (unsigned char *)&__tiles[(int)__put_map_id << 7u]
-        ld      DE, #0x040
-        add     HL, DE
-        ld      E, L
-        ld      D, H                ; DE: mask = spr + 0x40u;
-2$:
+        ret     NC
         
         push    BC
 
@@ -216,30 +180,29 @@ __asm
         and     A, #0x07
         ld      (#___dy), A
         
-        call    ___merge
-        
-        jr      5$
+        call    ___merge        
+        ret
         
 3$:
         pop     BC
-
-5$:
-        pop     BC
-6$:                
+        ret
 __endasm;
 }
 
 void redraw_scene(scene_item_t * scene) {
     scene;
 __asm
-        lda     HL, 2(SP)
+        push    BC
+
+        lda     HL, 4(SP)
         
         ;; HL = scene->next;
         ld      A, (HL+)
         ld      H, (HL)
+        ld      L, A
         
-        ld      E, #6
-        add     E
+        ld      A, #6
+        add     L
         ld      L, A
         adc     H
         sub     L
@@ -248,24 +211,45 @@ __asm
         ld      A, (HL+)
         ld      H, (HL)
         ld      L, A
-        
-        dec     E               ; E == 5
-1$:     
+
+1$:
         or      H
         jr      Z, 2$
         
         ld      A, (HL+)
         cp      #0xc0           ; skip all items with ID > 0xc0 
         jr      NC, 3$
-        
-        ld      (#___put_map_id), A
+
+        push    HL
+
+        ld      D, A
+        xor     A
+        ld      E, A
+        srl     D
+        rr      E
+       
+        ld      HL, #___tiles
+        ld      A, (HL+)
+        ld      H, (HL)
+        ld      L, A       
+       
+        add     HL, DE
+        ld      C, L
+        ld      B, H            ; BC: spr = (unsigned char *)&__tiles[(int)__put_map_id << 7u]
+        ld      DE, #0x040
+        add     HL, DE
+        ld      E, L
+        ld      D, H            ; DE: mask = spr + 0x40u;
+
+        pop     HL
+
         ld      A, (HL+)
         ld      (#___put_map_x), A
         ld      A, (HL+)
         ld      (#___put_map_y), A
         
         push    HL
-        call    _put_map
+        call    ___put_map
         pop     HL
         
         inc     HL
@@ -279,18 +263,74 @@ __asm
         
         jr      1$
         
-3$:     ld      A, L
-        add     E
+3$:     ld      A, #5
+        add     L
         ld      L, A
         adc     H
         sub     L               ; HL = HL + 5
         jr      4$
 2$:      
+        pop     BC
 __endasm; 
+}
+
+void erase_item(scene_item_t * item) {
+    item;
+__asm
+        push    BC
+        
+        lda     HL, 4(SP)
+        ld      A, (HL+)
+        ld      H, (HL)
+        ld      L, A
+        
+        inc     HL              ; skip id
+        ld      A, (HL+)
+        ld      (#___put_map_x), A
+        ld      A, (HL)
+        ld      (#___put_map_y), A
+        
+        ld      HL, #___empty
+        ld      A, (HL+)
+        ld      H, (HL)
+        ld      L, A
+        ld      B, H
+        ld      C, L
+        ld      D, H
+        ld      E, L
+        call    ___put_map
+        
+        pop     BC
+__endasm;
+}
+
+void draw_bitmap_XY(UBYTE x, UBYTE y, const unsigned char * spr, const unsigned char * mask) {
+    x; y; spr; mask;
+__asm
+        push    BC
+        
+        lda     HL, 9(SP)
+        ld      A, (HL-)
+        ld      D, A
+        ld      A, (HL-)
+        ld      E, A
+        ld      A, (HL-)
+        ld      B, A
+        ld      A, (HL-)
+        ld      C, A
+        ld      A, (HL-)
+        ld      (#___put_map_y), A
+        ld      A, (HL)
+        ld      (#___put_map_x), A
+        call    ___put_map
+        
+        pop     BC
+__endasm;    
 }
 
 /*
 // old pure C functions for reference
+static UBYTE __put_map_id; 
 void put_map() { 
     static UBYTE i, oy, dy;
     static unsigned char * data1, * data2, * spr, * mask, * limit;
@@ -350,17 +390,12 @@ void redraw_scene(scene_item_t * scene) {
         item = item->next;
     }
 }
-*/
-
-void draw_pattern_XYZ(UBYTE x, UBYTE y, UBYTE z, UBYTE id) {
-    __put_map_id = id, __put_map_x = to_x(x, y, z), __put_map_y = to_y(x, y, z);
-    put_map();
-}
 
 void erase_item(scene_item_t * item) {
     __put_map_id = 0xffu, __put_map_x = item->x, __put_map_y = item->y;
     put_map();
 }
+*/
 
 void replace_scene_item(scene_item_t * scene, scene_item_t * new_item) {
     static scene_item_t * item, * replace;

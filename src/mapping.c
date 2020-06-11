@@ -26,19 +26,19 @@ void set_view_port(UBYTE x, UBYTE y) __banked {
 
 // constant structures declared just before __nonbanked functions are nonbanked too
 const tiledesc_t used_tiles[] = {
-    { 4, &shadow_buffer[                           7*16] },
-    { 8, &shadow_buffer[     viewport_width * 16 + 5*16] },
-    {12, &shadow_buffer[ 2 * viewport_width * 16 + 3*16] },
-    {16, &shadow_buffer[ 3 * viewport_width * 16 + 1*16] },
-    {18, &shadow_buffer[ 4 * viewport_width * 16 + 0*16] },
-    {18, &shadow_buffer[ 5 * viewport_width * 16 + 0*16] },
-    {18, &shadow_buffer[ 6 * viewport_width * 16 + 0*16] },
-    {18, &shadow_buffer[ 7 * viewport_width * 16 + 0*16] },
-    {18, &shadow_buffer[ 8 * viewport_width * 16 + 0*16] },
-    {16, &shadow_buffer[ 9 * viewport_width * 16 + 1*16] },
-    {12, &shadow_buffer[10 * viewport_width * 16 + 3*16] },
-    { 8, &shadow_buffer[11 * viewport_width * 16 + 5*16] },
-    { 4, &shadow_buffer[12 * viewport_width * 16 + 7*16] }
+    {  0,  4, &shadow_buffer[                           7*16] },
+    {  4,  8, &shadow_buffer[     viewport_width * 16 + 5*16] },
+    { 12, 12, &shadow_buffer[ 2 * viewport_width * 16 + 3*16] },
+    { 24, 16, &shadow_buffer[ 3 * viewport_width * 16 + 1*16] },
+    { 40, 18, &shadow_buffer[ 4 * viewport_width * 16 + 0*16] },
+    { 58, 18, &shadow_buffer[ 5 * viewport_width * 16 + 0*16] },
+    { 76, 18, &shadow_buffer[ 6 * viewport_width * 16 + 0*16] },
+    { 94, 18, &shadow_buffer[ 7 * viewport_width * 16 + 0*16] },
+    {112, 18, &shadow_buffer[ 8 * viewport_width * 16 + 0*16] },
+    {130, 16, &shadow_buffer[ 9 * viewport_width * 16 + 1*16] },
+    {146, 12, &shadow_buffer[10 * viewport_width * 16 + 3*16] },
+    {158,  8, &shadow_buffer[11 * viewport_width * 16 + 5*16] },
+    {166,  4, &shadow_buffer[12 * viewport_width * 16 + 7*16] }
 };
 
 void copy_tiles() __nonbanked {
@@ -46,48 +46,48 @@ __asm
         push    BC
 
         ld      HL, #_used_tiles
-        ld      D, #viewport_height
-        ld      E, #1
+        ld      A, #viewport_height
 1$:
+        push    AF
+
         ld      A, (HL+)
-        ld      C, (HL)
-        inc     HL
-        ld      B, (HL)
-        inc     HL
+        inc     A
+        ld      E, A
+        ld      A, (HL+)
+        ld      D, A
+        ld      A, (HL+)
+        ld      C, A
+        ld      A, (HL+)
+        ld      B, A
         
         push    HL
-        push    DE
-        push    AF
         
         push    BC
-        ld      D, A
         push    DE
         call    _set_bkg_data
         add     SP, #4
         
-        pop     AF
-        pop     DE
         pop     HL
-        add     E
-        ld      E, A
 
-        dec     D
+        pop     AF
+        dec     A
         jr      NZ, 1$
 
         pop     BC
 __endasm;
 }
 
+void copy_tiles_row(UBYTE row) __nonbanked {
+  if (row < viewport_height) set_bkg_data(used_tiles[row].ofs + 1, used_tiles[row].count, used_tiles[row].data);
+}
+
 /*
 // old pure C functions for reference
 void copy_tiles() __nonbanked {
     static const tiledesc_t * used_tile_range;
-    static UBYTE i, idx;
-    idx = 1;
     used_tile_range = used_tiles;
-    for (i = 0; i < viewport_height; i++) {
-        set_bkg_data(idx, used_tile_range->count, used_tile_range->data);
-        idx += used_tile_range->count;
+    for (UBYTE i = 0; i < viewport_height; i++) {
+        set_bkg_data(used_tile_range->ofs + 1, used_tile_range->count, used_tile_range->data);
         used_tile_range++;
     }
 }
