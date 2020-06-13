@@ -17,5 +17,4 @@
 #define add_check___(a,b) check_##a##_##b
 #define check_size(typ,sz) typedef char add_check__(typ,__LINE__)[ (sizeof(typ) == (sz)) ? 1 : -1]
 
-
 #endif

@@ -32,11 +32,14 @@ void redraw_scene(scene_item_t * scene);
 // draws masked bitmap to x, y
 void draw_bitmap_XY(UBYTE x, UBYTE y, const unsigned char * spr, const unsigned char * mask);
 
-// erase item 
+// erase item (draws empty bitmap) 
 void erase_item(scene_item_t * item);
 
-// (re)places the item into scene
-void replace_scene_item(scene_item_t * scene, scene_item_t * new_item);
+// removes item from the item into the scene
+void remove_scene_item(scene_item_t * scene, scene_item_t * new_item);
+
+// place the item into the scene
+void place_scene_item(scene_item_t * scene, scene_item_t * new_item);
 
 // copy pre-built scene
 UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest);

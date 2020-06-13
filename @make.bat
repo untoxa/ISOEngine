@@ -65,8 +65,10 @@ sdasgb %ASMFLAGS% %OBJ%MBC1_RAM_INIT.rel %SRC%MBC1_RAM_INIT.s
 
 @for %%x in (
         shadow.c
-	mapping.c
+        mapping.c
         scenes.c
+        enemies.c
+        effects.c
         misc_resources.c
        ) do call :docompile %SRC% %%x
 

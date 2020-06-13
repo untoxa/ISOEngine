@@ -25,8 +25,9 @@ __asm
 
         ;; item is 2 tiles high
         ld      A, #0x10
-        ld      (#___counter), A
 1$:        
+        ld      (#___counter), A
+
         ;; AND with item mask
         ld      A, (DE)
         and     (HL)
@@ -82,7 +83,6 @@ __asm
                 
         ld      A, (#___counter)
         dec     A
-        ld      (#___counter), A
         jr      NZ, 1$
         ret
         
@@ -397,14 +397,18 @@ void erase_item(scene_item_t * item) {
 }
 */
 
-void replace_scene_item(scene_item_t * scene, scene_item_t * new_item) {
+void remove_scene_item(scene_item_t * scene, scene_item_t * new_item) {
+    static scene_item_t * item;
+    if (new_item->n) {
+        item = scene + (new_item->n - 1);
+        item->next = new_item->next;
+        new_item->n = 0, new_item->next = 0;
+    }    
+}
+
+void place_scene_item(scene_item_t * scene, scene_item_t * new_item) {
     static scene_item_t * item, * replace;
     static int l, h, i, c;
-    if (new_item->n) {
-        item = scene;
-        item += (new_item->n - 1);
-        item->next = new_item->next;
-    }
     // bsearch 
     item = scene + 1;
     l = 0u, h = scene_items_count - 1u;

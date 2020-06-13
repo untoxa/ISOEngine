@@ -25,8 +25,33 @@ DATA_0 scene_t collision_buf;
 DATA_0 UBYTE __end_marker;
 
 void clear_shadow_buffer() {
+__asm
+        ld      HL, #_shadow_buffer
+        ld      DE, #(viewport_height * viewport_width * (16 / 8))
+        inc     D
+        xor     A
+1$:        
+        ld      (HL+), A
+        ld      (HL+), A
+        ld      (HL+), A
+        ld      (HL+), A
+        ld      (HL+), A
+        ld      (HL+), A
+        ld      (HL+), A
+        ld      (HL+), A
+        dec     E
+        jr      NZ, 1$
+        dec     D
+        jr      NZ, 1$        
+__endasm;    
+}
+
+/*
+// old pure C functions for reference
+void clear_shadow_buffer() {
     static unsigned char * shadow_ptr;
     static UWORD sz;
     sz = sizeof(shadow_buffer), shadow_ptr = (unsigned char *)&shadow_buffer;
     while(sz) *shadow_ptr++ = 0u, sz--;
 }
+*/    
