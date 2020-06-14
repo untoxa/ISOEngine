@@ -28,7 +28,7 @@
 @set LFLAGS=%LFLAGS% -yt2 -yo4 -ya4
 @set LFILES=%GBDKLIB%gb\crt0.o
 
-@set ASMFLAGS=-plosgff -I"libc"
+@set ASMFLAGS=-plosgff -I%GBDKLIB%
 
 @echo Cleanup...
 
@@ -66,6 +66,7 @@ sdasgb %ASMFLAGS% %OBJ%MBC1_RAM_INIT.rel %SRC%MBC1_RAM_INIT.s
 @for %%x in (
         shadow.c
         mapping.c
+        clipping.c
         scenes.c
         enemies.c
         effects.c

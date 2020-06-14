@@ -4,9 +4,9 @@
 #define viewport_height 13
 #define viewport_width 18
 
-#define max_scene_x 9u
-#define max_scene_y 9u
-#define max_scene_z 4u
+#define max_scene_x 9
+#define max_scene_y 9
+#define max_scene_z 4
 
 #define to_x(x,y,z) ((x) + (y))
 #define to_y(x,y,z) ((7u * 8u) + ((x) << 2u) - ((y) << 2u) - ((z) << 3u))
@@ -16,5 +16,8 @@
 #define add_check__(a,b) add_check___(a,b)
 #define add_check___(a,b) check_##a##_##b
 #define check_size(typ,sz) typedef char add_check__(typ,__LINE__)[ (sizeof(typ) == (sz)) ? 1 : -1]
+
+#define item_tilewidth 2
+#define item_tileheight 2
 
 #endif

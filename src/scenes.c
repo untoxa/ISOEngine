@@ -24,7 +24,7 @@ __asm
         ld      H, A
 
         ;; item is 2 tiles high
-        ld      A, #0x10
+        ld      A, #(item_tileheight * 8)
 1$:        
         ld      (#___counter), A
 
@@ -161,7 +161,7 @@ __asm
         ld      H, A        
         
         pop     BC
-        ld      A, #0x20
+        ld      A, #(item_tileheight * 16)
         add     C
         ld      C, A
         adc     B
@@ -169,7 +169,7 @@ __asm
         ld      B, A
         
         pop     DE
-        ld      A, #0x20
+        ld      A, #(item_tileheight * 16)
         add     E
         ld      E, A
         adc     D
@@ -236,7 +236,7 @@ __asm
         add     HL, DE
         ld      C, L
         ld      B, H            ; BC: spr = (unsigned char *)&__tiles[(int)__put_map_id << 7u]
-        ld      DE, #0x040
+        ld      DE, #(item_tileheight * item_tilewidth * 16)
         add     HL, DE
         ld      E, L
         ld      D, H            ; DE: mask = spr + 0x40u;
@@ -398,10 +398,8 @@ void erase_item(scene_item_t * item) {
 */
 
 void remove_scene_item(scene_item_t * scene, scene_item_t * new_item) {
-    static scene_item_t * item;
     if (new_item->n) {
-        item = scene + (new_item->n - 1);
-        item->next = new_item->next;
+        (scene + (new_item->n - 1))->next = new_item->next;
         new_item->n = 0, new_item->next = 0;
     }    
 }
@@ -459,11 +457,39 @@ UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
 }
 
 void clear_map(scene_t * dest) {
+    dest;
+__asm
+        lda     HL, 2(SP)
+        ld      A, (HL+)
+        ld      H, (HL)
+        ld      L, A
+        ld      DE, #(max_scene_x * max_scene_y * max_scene_z / 4)
+        inc     D
+        inc     E
+        xor     A
+        jr      2$
+1$:        
+        ld      (HL+), A
+        ld      (HL+), A
+        ld      (HL+), A
+        ld      (HL+), A
+2$:        
+        dec     E
+        jr      NZ, 1$
+        dec     D
+        jr      NZ, 1$        
+__endasm;    
+}
+
+/*
+// old pure C functions for reference
+void clear_map(scene_t * dest) {
     static unsigned char * tmp;
     static UWORD sz;
     sz = sizeof(*dest), tmp = (unsigned char *)dest;
     while (sz) *tmp++ = 0u, sz--;    
 }
+*/
 
 void scene_to_map(const scene_item_t * sour, scene_t * dest) {
     static scene_item_t * src;

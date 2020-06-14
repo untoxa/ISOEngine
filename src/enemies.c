@@ -1,7 +1,7 @@
 #include "enemies.h"
 
 static moving_item_t * item; 
-static scene_item_t * s_item, * m_item;
+static scene_item_t * m_item;
 static UBYTE i;
 
 void remove_multiple_items(scene_item_t * scene, moving_item_t * items, UBYTE count) {
@@ -10,8 +10,7 @@ void remove_multiple_items(scene_item_t * scene, moving_item_t * items, UBYTE co
     for (i = 0; i < count; i++) {
         m_item = item->scene_item;
         if (m_item->n) {
-            s_item = scene + (m_item->n - 1);
-            s_item->next = m_item->next;
+            (scene + (m_item->n - 1))->next = m_item->next;
             m_item->n = 0, m_item->next = 0;
         }
         item--;        

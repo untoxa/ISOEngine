@@ -11,6 +11,7 @@ char buf[0x20];
 #include "globals.h"
 #include "shadow.h"
 #include "mapping.h"
+#include "clipping.h"
 #include "scenes.h"
 #include "enemies.h"
 #include "effects.h"
@@ -21,6 +22,9 @@ char buf[0x20];
 #include "misc_resources.h"
 
 #define try_change_room(dir, action) ((dir) ? (position = (dir), (action), 1u) : 0u)
+
+// current bank tracking variable defined in crt0
+extern volatile __sfr _current_bank;
 
 // set initial position in the global world
 const world_item_t * position = &world[0];
@@ -87,7 +91,8 @@ void move_enemies() {
 void main() {
     SWITCH_RAM_MBC1(0);
 
-    SWITCH_ROM_MBC1(scene_resources.bank);
+    _current_bank = scene_resources.bank;
+    SWITCH_ROM_MBC1(_current_bank);
     initialize_tiles(scene_resources.data->data, empty_tiles);
     
     // clear the shadow buffer
@@ -161,10 +166,8 @@ void main() {
                     room_changed = try_change_room(position->S, (py = max_scene_y - 1u, sc_dir = SC_SOUTH)); // go south
                 } else py--;
             } else if (joy & J_A) {
-                wait_vbl_done;
-                SCX_REG += 2, SCY_REG++;
-            } else if (joy & J_B) {
-                scroll_out(SC_WEST, 1, 2);
+                waitpadup();
+                test_clipping();
             }
         }
         if (!room_changed) {

@@ -29,7 +29,9 @@ __asm
         ld      HL, #_shadow_buffer
         ld      DE, #(viewport_height * viewport_width * (16 / 8))
         inc     D
+        inc     E
         xor     A
+        jr      2$
 1$:        
         ld      (HL+), A
         ld      (HL+), A
@@ -39,6 +41,7 @@ __asm
         ld      (HL+), A
         ld      (HL+), A
         ld      (HL+), A
+2$:        
         dec     E
         jr      NZ, 1$
         dec     D
