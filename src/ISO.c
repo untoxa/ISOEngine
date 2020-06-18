@@ -47,18 +47,32 @@ const scene_item_t * enemies_room = r2; // enemies only exist in room2
 
 // player item
 item_bitmap_t player_bkg;
-scene_item_t player_item = {.id=0x09u, .n=0, .next=0};
+scene_item_t player_item = {.id=0x0cu, .n=0, .next=0};
 clip_item_t player = {.x=8, .y=0, .z=0, .flags=0, .item_bkg=&player_bkg, .scene_item=&player_item};
-// player old position
-UBYTE opx, opy, opz;
 
 UBYTE joy, redraw, falling, room_changed;
 static UBYTE tmp;
 static UBYTE scene_count;
 static enum scroll_dir sc_dir;
 
+static enum scroll_dir anim_dir;
+static UBYTE anim_ids[4][2] = { 
+    {0x0eu, 0x0cu}, 
+    {0x0du, 0x0cu},
+    {0x0eu, 0x0cu}, 
+    {0x0du, 0x0cu} 
+};
+static UBYTE anim_fall[2] = {0x0fu, 0x0cu}; 
+static UBYTE anim_climb[4][2] = { 
+    {0x0eu, 0x0cu}, 
+    {0x0du, 0x0cu},
+    {0x0eu, 0x0cu}, 
+    {0x0du, 0x0cu} 
+};
+
 // sys_time is defined by crt0
 extern UWORD sys_time;
+UWORD old_time;
 
 void move_enemies() {
     static UBYTE change_dir;
@@ -98,6 +112,38 @@ void move_enemies() {
     }
 }
 
+void redraw_all(UBYTE room_changed) {
+    if (scene_count) {
+        if (!room_changed) {
+            // restore background under the enemies
+            if enemies_exist rev_iter_enemies(i, restore_item_bkg(enemies[i-1]));
+            // restore background under the player
+            restore_item_bkg(player);
+        }
+        
+        // set the new position of the player item
+        update_multiple_items_pos(&player, 1);                                
+        // set the new position for each enemy item
+        update_multiple_items_pos(enemies, enemies_count);
+                            
+        if (room_changed) redraw_scene(scene_items);
+
+        // save background under the player
+        save_item_bkg(player);
+        // save background under the enemies
+        if enemies_exist iter_enemies(i, save_item_bkg(enemies[i]));
+
+        // output enemies
+        if enemies_exist iter_enemies(i, draw_item(scene_items, &enemies[i]));
+        // output player
+        draw_item(scene_items, &player);
+    }
+    if (!room_changed) {
+        wait_vbl_done();
+        copy_tiles();                
+    } else scroll_out(sc_dir, 1, 2); 
+}
+
 void main() {
     SWITCH_RAM_MBC1(0);
 
@@ -115,8 +161,6 @@ void main() {
     player.scene_item->x = to_x(player.x, player.y, player.z), 
     player.scene_item->y = to_y(player.x, player.y, player.z), 
     player.scene_item->coords = to_coords(player.x, player.y, player.z);
-
-    opx = player.x, opy = player.y, opz = player.z;
 
     // copy scene to RAM
     scene_count = copy_scene(position->room, scene_items);
@@ -151,7 +195,12 @@ void main() {
         if (player.z > 0) {
             tmp = collision_buf[player.x][player.z - 1][player.y];
             if ((tmp == 0u) || (tmp == 1u) || (tmp == 9u)) {
-                player.z--, falling = 1u;
+                player.z--; 
+                player.scene_item->id = anim_fall[0];
+                redraw_all(0);
+                player.scene_item->id = anim_fall[1];
+                redraw_all(0);
+                falling = 1u;
             }
         }
         // walk
@@ -160,35 +209,95 @@ void main() {
             if (joy & J_LEFT) {
                 if (!player.x) {
                     room_changed = try_change_room(position->W, (player.x = max_scene_x - 1u, sc_dir = SC_WEST)); // go west
-                } else player.x--;
+                } else {
+                    tmp = collision_buf[player.x - 1u][player.z][player.y];
+                    if ((tmp == 0u) || (tmp == 1u) || (tmp == 9u)) {
+                        player.scene_item->id = anim_ids[SC_WEST][0];
+                        redraw_all(0);
+                        player.x--;
+                        player.scene_item->id = anim_ids[SC_WEST][1];
+                        redraw_all(0);
+                    } else if (tmp == 5u) {
+                        player.scene_item->id = anim_climb[SC_WEST][0];
+                        redraw_all(0);
+                        player.x--;
+                        player.z++;
+                        player.scene_item->id = anim_climb[SC_WEST][1];
+                        redraw_all(0);                        
+                    }
+                }
+                anim_dir = SC_WEST;
             } else if (joy & J_RIGHT) {
                 if (player.x == (max_scene_x - 1u)) {
                     room_changed = try_change_room(position->E, (player.x = 0u, sc_dir = SC_EAST)); // go east
-                } else player.x++;
+                } else {
+                    tmp = collision_buf[player.x + 1u][player.z][player.y];
+                    if ((tmp == 0u) || (tmp == 1u) || (tmp == 9u)) {
+                        player.x++;
+                        player.scene_item->id = anim_ids[SC_EAST][0];
+                        redraw_all(0);
+                        player.scene_item->id = anim_ids[SC_EAST][1];
+                        redraw_all(0);
+                    } else if (tmp == 5u) {
+                        player.x++;
+                        player.scene_item->id = anim_climb[SC_EAST][0];
+                        redraw_all(0);
+                        player.z++;
+                        player.scene_item->id = anim_climb[SC_EAST][1];
+                        redraw_all(0);                        
+                    }
+                }
             } else if (joy & J_UP) {
                 if (player.y == (max_scene_y - 1u)) {
                     room_changed = try_change_room(position->N, (player.y = 0u, sc_dir = SC_NORTH)); // go north
-                } else player.y++;
+                } else {
+                    tmp = collision_buf[player.x][player.z][player.y + 1u];
+                    if ((tmp == 0u) || (tmp == 1u) || (tmp == 9u)) {
+                        player.scene_item->id = anim_ids[SC_NORTH][0];
+                        redraw_all(0);
+                        player.y++;
+                        player.scene_item->id = anim_ids[SC_NORTH][1];
+                        redraw_all(0);
+                    } else if (tmp == 5u) {
+                        player.scene_item->id = anim_climb[SC_NORTH][0];
+                        redraw_all(0);
+                        player.y++;
+                        player.z++;
+                        player.scene_item->id = anim_climb[SC_NORTH][1];
+                        redraw_all(0);                        
+                    }
+                }
             } else if (joy & J_DOWN) {
                 if (!player.y) { 
                     room_changed = try_change_room(position->S, (player.y = max_scene_y - 1u, sc_dir = SC_SOUTH)); // go south
-                } else player.y--;
+                } else {
+                    tmp = collision_buf[player.x][player.z][player.y - 1u];
+                    if ((tmp == 0u) || (tmp == 1u) || (tmp == 9u)) {
+                        player.y--;
+                        player.scene_item->id = anim_ids[SC_SOUTH][0];
+                        redraw_all(0);
+                        player.scene_item->id = anim_ids[SC_SOUTH][1];
+                        redraw_all(0);
+                    } else if (tmp == 5u) {
+                        player.y--;
+                        player.scene_item->id = anim_climb[SC_SOUTH][0];
+                        redraw_all(0);
+                        player.z++;
+                        player.scene_item->id = anim_climb[SC_SOUTH][1];
+                        redraw_all(0);                        
+                    }
+                }
+            } else if (joy & J_A) {
+                redraw = 1u;
             } 
         }
         if (!room_changed) {
-            // check collisions
-            if (!((opx == player.x) && (opy == player.y) && (opz == player.z))) {
-                tmp = collision_buf[player.x][player.z][player.y];
-                if ((tmp == 0u) || (tmp == 1u) || (tmp == 9u)) {
-                    redraw = 1u;
-                } else if (tmp == 5u) {
-                    player.z++, redraw = 1u;
-                } else {
-                    player.x = opx, player.y = opy, player.z = opz;
-                }
-            }
             // move enemies
-            if (enemies_exist && (redraw || (!((UBYTE)sys_time & 7)))) move_enemies();
+            if (enemies_exist && ((sys_time - old_time) > 7)) {
+                old_time = sys_time;
+                move_enemies();
+                redraw = 1u;
+            }
         } else {
             // clear the shadow buffer
             clear_shadow_buffer();
@@ -199,37 +308,9 @@ void main() {
         }
         // redraw
         if (redraw) {
-            if (scene_count) {
-                if (!room_changed) {
-                    // restore background under the enemies
-                    if enemies_exist rev_iter_enemies(i, restore_item_bkg(enemies[i-1]));
-                    // restore background under the player
-                    restore_item_bkg(player);
-                }
-                
-                // set the new position of the player item
-                update_multiple_items_pos(&player, 1);
-                // set the new position for each enemy item
-                update_multiple_items_pos(enemies, enemies_count);
-                                    
-                if (room_changed) redraw_scene(scene_items);
-
-                // save background under the player
-                save_item_bkg(player);
-                // save background under the enemies
-                if enemies_exist iter_enemies(i, save_item_bkg(enemies[i]));
-
-                // output enemies
-                if enemies_exist iter_enemies(i, draw_item(scene_items, &enemies[i]));
-                // output player
-                draw_item(scene_items, &player);
-            }
-            if (!room_changed) {
-                wait_vbl_done();
-                copy_tiles();                
-            } else scroll_out(sc_dir, 1, 2); 
-            opx = player.x, opy = player.y, opz = player.z;
+            redraw_all(room_changed); 
         } else wait_vbl_done();
+        
         room_changed = redraw = 0u;
     }
 }
