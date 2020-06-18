@@ -22,12 +22,12 @@ UBYTE scene_items_count;
 // collision buffer in RAM1
 DATA_0 scene_t collision_buf;
 
+DATA_0 unsigned char dirty_rows[16];
+
 DATA_0 UBYTE __end_marker;
 
-void clear_shadow_buffer() {
+void __memset8() __naked {
 __asm
-        ld      HL, #_shadow_buffer
-        ld      DE, #(viewport_height * viewport_width * (16 / 8))
         inc     D
         inc     E
         xor     A
@@ -46,6 +46,54 @@ __asm
         jr      NZ, 1$
         dec     D
         jr      NZ, 1$        
+        ret
+__endasm;    
+}
+
+void clear_shadow_buffer() __naked {
+__asm
+        ld      HL, #_shadow_buffer
+        ld      DE, #(viewport_height * viewport_width * (16 / 8))
+        jp      ___memset8
+__endasm;    
+}
+
+void clear_dirty_rows() __naked {
+__asm
+        ld      HL, #_dirty_rows
+        ld      DE, #(16 / 8)
+        jp      ___memset8
+__endasm;    
+}
+
+void mark_row_dirty(UBYTE y) __naked {
+    y;
+__asm
+        lda     HL, 2(SP)
+        ld      A, (HL)
+        
+        srl     A
+        srl     A
+        srl     A
+        rl      E
+        and     #0x0f
+        
+        ld      HL, #_dirty_rows
+        add     L
+        ld      L, A
+        adc     H
+        sub     L
+        ld      H, A
+        
+        ld      A, #1
+        ld      (HL+), A
+        ld      (HL+), A
+        
+        srl     E
+        ret     NC
+        
+        ld      (HL), A
+        ret
 __endasm;    
 }
 

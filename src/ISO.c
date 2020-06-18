@@ -114,6 +114,7 @@ void move_enemies() {
 
 void redraw_all(UBYTE room_changed) {
     if (scene_count) {
+        clear_dirty_rows();
         if (!room_changed) {
             // restore background under the enemies
             if enemies_exist rev_iter_enemies(i, restore_item_bkg(enemies[i-1]));
@@ -140,7 +141,8 @@ void redraw_all(UBYTE room_changed) {
     }
     if (!room_changed) {
         wait_vbl_done();
-        copy_tiles();                
+        //copy_tiles();
+        copy_dirty_tiles();
     } else scroll_out(sc_dir, 1, 2); 
 }
 

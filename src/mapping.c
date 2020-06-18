@@ -26,19 +26,19 @@ void set_view_port(UBYTE x, UBYTE y) __banked {
 
 // constant structures declared just before __nonbanked functions are nonbanked too
 const tiledesc_t used_tiles[] = {
-    {  0,  4, &shadow_buffer[                           7*16] },
-    {  4,  8, &shadow_buffer[     viewport_width * 16 + 5*16] },
-    { 12, 12, &shadow_buffer[ 2 * viewport_width * 16 + 3*16] },
-    { 24, 16, &shadow_buffer[ 3 * viewport_width * 16 + 1*16] },
-    { 40, 18, &shadow_buffer[ 4 * viewport_width * 16 + 0*16] },
-    { 58, 18, &shadow_buffer[ 5 * viewport_width * 16 + 0*16] },
-    { 76, 18, &shadow_buffer[ 6 * viewport_width * 16 + 0*16] },
-    { 94, 18, &shadow_buffer[ 7 * viewport_width * 16 + 0*16] },
-    {112, 18, &shadow_buffer[ 8 * viewport_width * 16 + 0*16] },
-    {130, 16, &shadow_buffer[ 9 * viewport_width * 16 + 1*16] },
-    {146, 12, &shadow_buffer[10 * viewport_width * 16 + 3*16] },
-    {158,  8, &shadow_buffer[11 * viewport_width * 16 + 5*16] },
-    {166,  4, &shadow_buffer[12 * viewport_width * 16 + 7*16] }
+    { &shadow_buffer[                           7*16],   0,  4 },
+    { &shadow_buffer[     viewport_width * 16 + 5*16],   4,  8 },
+    { &shadow_buffer[ 2 * viewport_width * 16 + 3*16],  12, 12 },
+    { &shadow_buffer[ 3 * viewport_width * 16 + 1*16],  24, 16 },
+    { &shadow_buffer[ 4 * viewport_width * 16 + 0*16],  40, 18 },
+    { &shadow_buffer[ 5 * viewport_width * 16 + 0*16],  58, 18 },
+    { &shadow_buffer[ 6 * viewport_width * 16 + 0*16],  76, 18 },
+    { &shadow_buffer[ 7 * viewport_width * 16 + 0*16],  94, 18 },
+    { &shadow_buffer[ 8 * viewport_width * 16 + 0*16], 112, 18 },
+    { &shadow_buffer[ 9 * viewport_width * 16 + 1*16], 130, 16 },
+    { &shadow_buffer[10 * viewport_width * 16 + 3*16], 146, 12 },
+    { &shadow_buffer[11 * viewport_width * 16 + 5*16], 158,  8 },
+    { &shadow_buffer[12 * viewport_width * 16 + 7*16], 166,  4 }
 };
 
 void copy_tiles() __nonbanked {
@@ -51,28 +51,91 @@ __asm
         push    AF
 
         ld      A, (HL+)
+        ld      E, A
+        ld      A, (HL+)
+        ld      D, A
+        push    DE
+        
+        ld      A, (HL+)
         inc     A
         ld      E, A
         ld      A, (HL+)
         ld      D, A
-        ld      A, (HL+)
-        ld      C, A
-        ld      A, (HL+)
-        ld      B, A
-        
-        push    HL
-        
-        push    BC
         push    DE
+        
+        ld      B, H
+        ld      C, L
+        
         call    _set_bkg_data
         add     SP, #4
         
-        pop     HL
+        ld      H, B
+        ld      L, C
 
         pop     AF
         dec     A
         jr      NZ, 1$
 
+        pop     BC
+__endasm;
+}
+
+void copy_dirty_tiles() __nonbanked {
+__asm
+        push    BC
+
+        ld      DE, #_dirty_rows
+        ld      HL, #_used_tiles
+        ld      C, #viewport_height
+1$:
+        ld      A, (DE)
+        inc     DE
+        or      A
+        jr      Z, 2$
+        
+        push    BC
+        push    DE
+
+        ld      A, (HL+)
+        ld      E, A
+        ld      A, (HL+)
+        ld      D, A
+        push    DE
+        
+        ld      A, (HL+)
+        inc     A
+        ld      E, A
+        ld      A, (HL+)
+        ld      D, A
+        push    DE
+        
+        ld      B, H
+        ld      C, L
+        
+        call    _set_bkg_data
+        add     SP, #4
+        
+        ld      H, B
+        ld      L, C
+        
+        pop     DE
+        pop     BC        
+        
+        dec     C
+        jr      NZ, 1$
+
+        jr      3$
+2$:        
+        ld      A, #4
+        add     L
+        ld      L, A
+        adc     H
+        sub     L
+        ld      H, A
+
+        dec     C
+        jr      NZ, 1$
+3$:
         pop     BC
 __endasm;
 }

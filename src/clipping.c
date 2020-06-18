@@ -539,4 +539,5 @@ void draw_item(scene_item_t * scene, clip_item_t * item) {
     calculate_mask(scene, item->scene_item, &temp_mask);
     apply_inverse_mask((item_bitmap_t *)(&__tiles[(int)(item->scene_item->id) << 7u]), &temp_mask, &temp_bitmap);
     draw_masked_bitmap_XY(item->scene_item->x, item->scene_item->y, (unsigned char *)&temp_bitmap, (unsigned char *)&temp_mask);
+    mark_row_dirty(item->scene_item->y);
 }

@@ -33,7 +33,7 @@ void apply_inverse_mask(item_bitmap_t * sour, item_bitmap_t * mask, item_bitmap_
 #define save_item_bkg(item) copy_from_shadow_XY(item.scene_item->x, item.scene_item->y, item.item_bkg)
 
 // erase item and restore the background
-#define restore_item_bkg(item) draw_to_shadow_XY(item.scene_item->x, item.scene_item->y, (const unsigned char *)item.item_bkg)
+#define restore_item_bkg(item) draw_to_shadow_XY(item.scene_item->x, item.scene_item->y, (const unsigned char *)item.item_bkg), mark_row_dirty(item.scene_item->y)
 
 // calculate clipping and draw item to the shadow buffer
 void draw_item(scene_item_t * scene, clip_item_t * item);
