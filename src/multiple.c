@@ -1,10 +1,10 @@
-#include "enemies.h"
+#include "multiple.h"
 
-static moving_item_t * item; 
+static clip_item_t * item; 
 static scene_item_t * m_item;
 static UBYTE i;
 
-void remove_multiple_items(scene_item_t * scene, moving_item_t * items, UBYTE count) {
+void remove_multiple_items(scene_item_t * scene, clip_item_t * items, UBYTE count) {
     if (!count) return;
     item = items + (count - 1);    
     for (i = 0; i < count; i++) {
@@ -17,7 +17,7 @@ void remove_multiple_items(scene_item_t * scene, moving_item_t * items, UBYTE co
     }
 }
 
-void place_multiple_items(scene_item_t * scene, moving_item_t * items, UBYTE count) {
+void place_multiple_items(scene_item_t * scene, clip_item_t * items, UBYTE count) {
     if (!count) return;
     item = items;
     for (i = 0; i < count; i++) {
@@ -26,7 +26,7 @@ void place_multiple_items(scene_item_t * scene, moving_item_t * items, UBYTE cou
     }    
 }
 
-void erase_multiple_items(moving_item_t * items, UBYTE count) {
+void erase_multiple_items(clip_item_t * items, UBYTE count) {
     if (!count) return;
     item = items;
     for (i = 0; i < count; i++) {
@@ -35,7 +35,7 @@ void erase_multiple_items(moving_item_t * items, UBYTE count) {
     }    
 }
 
-void update_multiple_items_pos(moving_item_t * items, UBYTE count) {
+void update_multiple_items_pos(clip_item_t * items, UBYTE count) {
     if (!count) return;
     item = items;
     for (i = 0; i < count; i++) {

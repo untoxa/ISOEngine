@@ -12,17 +12,8 @@
 @set DEBUGGING=0
 @set OPTIMIZE=1
 
-@if %1. == debug. @set DEBUGGING=1
-@if %DEBUGGING%==1 @echo Debugging mode ON
- 
-@if %1. == profile. @set PROFILING=1 
-@if %PROFILING%==1 @echo Profilig mode ON
-
 @set CFLAGS=-mgbz80 --no-std-crt0 -I %GBDK%include -I %GBDK%include\asm -I %SRC%include -I %OBJ% -c
 @set CFLAGS=%CFLAGS% --max-allocs-per-node 50000
-@if %OPTIMIZE%==1 @set CFLAGS=%CFLAGS% --peep-file peephole\gbz80.rul
-@if %PROFILING%==1 @set CFLAGS=%CFLAGS% --profile -DPROFILING
-@if %DEBUGGING%==1 @set CFLAGS=%CFLAGS% -DDEBUGGING
 
 @set LFLAGS=-n -- -z -m -j -k%GBDKLIB%gbz80\ -lgbz80.lib -k%GBDKLIB%gb\ -lgb.lib 
 @set LFLAGS=%LFLAGS% -yt2 -yo4 -ya4
@@ -30,12 +21,28 @@
 
 @set ASMFLAGS=-plosgff -I%GBDKLIB%
 
+@if %1. == debug. (
+    @echo Debugging mode ON
+    @set DEBUGGING=1
+@rem    @set CFLAGS=%CFLAGS% --debug
+)
+ 
+@if %1. == profile. (
+    @set PROFILING=1 
+    @echo Profilig mode ON
+)
+
+@if %OPTIMIZE%==1 @set CFLAGS=%CFLAGS% --peep-file peephole\gbz80.rul
+@if %PROFILING%==1 @set CFLAGS=%CFLAGS% --profile -DPROFILING
+@if %DEBUGGING%==1 @set CFLAGS=%CFLAGS% -DDEBUGGING
+
 @echo Cleanup...
 
 @if exist %OBJ% rd /s/q %OBJ%
 @if exist %PROJ%.gb del %PROJ%.gb
 @if exist %PROJ%.sym del %PROJ%.sym
 @if exist %PROJ%.map del %PROJ%.map
+@if exist %PROJ%.noi del %PROJ%.noi
 
 @if not exist %OBJ% mkdir %OBJ%
 
@@ -47,14 +54,14 @@ sdasgb %ASMFLAGS% %OBJ%MBC1_RAM_INIT.rel %SRC%MBC1_RAM_INIT.s
 @echo COMPILING RESOURCES...
 
 @for %%x in (
-        scene_resources.b1.gbr
+         scene_resources.b1.gbr
        ) do (
          %TOOLS%gbr2c.exe %RES%%%x %OBJ%
          call :docompile %OBJ% %%x.c
        )
 
 @for %%x in (
-        rooms.3dmap
+         rooms.3dmap
        ) do (
          %TOOLS%mapcvt.exe %MAP%%%x %OBJ%%%x
          call :docompile %OBJ% %%x.c
@@ -68,7 +75,7 @@ sdasgb %ASMFLAGS% %OBJ%MBC1_RAM_INIT.rel %SRC%MBC1_RAM_INIT.s
         mapping.c
         clipping.c
         scenes.c
-        enemies.c
+        multiple.c
         effects.c
         misc_resources.c
        ) do call :docompile %SRC% %%x

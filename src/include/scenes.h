@@ -23,6 +23,9 @@ typedef struct world_item_t {
     struct scene_item_t * room;
 } world_item_t;
 
+// pointer to tiles
+extern const unsigned char * __tiles;
+
 // ititialize tiles
 void initialize_tiles(const unsigned char * tiles, const unsigned char * empty);
 
@@ -30,7 +33,7 @@ void initialize_tiles(const unsigned char * tiles, const unsigned char * empty);
 void redraw_scene(scene_item_t * scene);
 
 // draws masked bitmap to x, y
-void draw_bitmap_XY(UBYTE x, UBYTE y, const unsigned char * spr, const unsigned char * mask);
+void draw_masked_bitmap_XY(UBYTE x, UBYTE y, const unsigned char * spr, const unsigned char * mask);
 
 // erase item (draws empty bitmap) 
 void erase_item(scene_item_t * item);

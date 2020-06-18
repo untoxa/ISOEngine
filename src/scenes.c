@@ -2,15 +2,16 @@
 #include "shadow.h"
 
 // pointer to tile resources
-static const unsigned char * __tiles, *__empty;
+const unsigned char * __tiles;
+static const unsigned char * __empty;
 static UBYTE __put_map_x, __put_map_y; 
 
 void initialize_tiles(const unsigned char * tiles, const unsigned char * empty) {
     __tiles = tiles, __empty = empty;
 }
 
-UBYTE __dy, __counter;
-void __merge() __naked {
+static UBYTE __dy, __counter;
+void __merge_masked() __naked {
 __asm
         ;; now HL: data, DE: mask, BC: item 
 
@@ -92,7 +93,7 @@ __asm
 __endasm;
 }
 
-void __put_map() __naked { 
+void __put_masked_map() __naked { 
 __asm
         ;; now DE: mask, BC: item 
 
@@ -150,7 +151,7 @@ __asm
         and     A, #0x07
         ld      (#___dy), A
         
-        call    ___merge
+        call    ___merge_masked
         
         pop     HL
         ld      A, #0x10
@@ -180,7 +181,7 @@ __asm
         and     A, #0x07
         ld      (#___dy), A
         
-        call    ___merge        
+        call    ___merge_masked        
         ret
         
 3$:
@@ -249,7 +250,7 @@ __asm
         ld      (#___put_map_y), A
         
         push    HL
-        call    ___put_map
+        call    ___put_masked_map
         pop     HL
         
         inc     HL
@@ -298,13 +299,13 @@ __asm
         ld      C, L
         ld      D, H
         ld      E, L
-        call    ___put_map
+        call    ___put_masked_map
         
         pop     BC
 __endasm;
 }
 
-void draw_bitmap_XY(UBYTE x, UBYTE y, const unsigned char * spr, const unsigned char * mask) {
+void draw_masked_bitmap_XY(UBYTE x, UBYTE y, const unsigned char * spr, const unsigned char * mask) {
     x; y; spr; mask;
 __asm
         push    BC
@@ -322,7 +323,7 @@ __asm
         ld      (#___put_map_y), A
         ld      A, (HL)
         ld      (#___put_map_x), A
-        call    ___put_map
+        call    ___put_masked_map
         
         pop     BC
 __endasm;    
@@ -405,7 +406,7 @@ void remove_scene_item(scene_item_t * scene, scene_item_t * new_item) {
 }
 
 void place_scene_item(scene_item_t * scene, scene_item_t * new_item) {
-    static scene_item_t * item, * replace;
+    static scene_item_t * item;
     static int l, h, i, c;
     // bsearch 
     item = scene + 1;

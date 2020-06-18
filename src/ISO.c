@@ -5,7 +5,7 @@
 #endif
 #ifdef DEBUGGING
 #include <stdio.h>
-char buf[0x20];
+static char buf[0x20];
 #endif
 
 #include "globals.h"
@@ -13,7 +13,7 @@ char buf[0x20];
 #include "mapping.h"
 #include "clipping.h"
 #include "scenes.h"
-#include "enemies.h"
+#include "multiple.h"
 #include "effects.h"
 
 #include "rooms.h"
@@ -31,19 +31,26 @@ const world_item_t * position = &world[0];
 
 // enemies
 #define enemies_count 2
+item_bitmap_t enemies_bkg[enemies_count];
 scene_item_t enemies_itm[enemies_count] = {{.id=0x0bu, .n=0, .next=0}, {.id=0x0bu, .n=0, .next=0}};
-moving_item_t enemies[enemies_count] = {{.x=0, .y=0, .z=0, .flags=0, .scene_item=&enemies_itm[0]}, {.x=0, .y=3, .z=0, .flags=0, .scene_item=&enemies_itm[1]}};
+clip_item_t enemies[enemies_count] = {
+    {.x=0, .y=0, .z=0, .flags=0, .item_bkg=&enemies_bkg[0], .scene_item=&enemies_itm[0]}, 
+    {.x=0, .y=3, .z=0, .flags=0, .item_bkg=&enemies_bkg[1], .scene_item=&enemies_itm[1]}
+};
 const scene_item_t * enemies_room = r2; // enemies only exist in room2
 #define enemies_exist (position->room == enemies_room)
+#define iter_enemies(key, what) for (UBYTE key = 0; key < enemies_count; key++) (what)
+#define rev_iter_enemies(key, what) for (INT8 key = enemies_count; key != 0; key--) (what)
 
-
-// player position
-UBYTE px = 8, py = 0, pz = 0;
+// player item
+item_bitmap_t player_bkg;
+scene_item_t player_item = {.id=0x09u, .n=0, .next=0};
+clip_item_t player = {.x=8, .y=0, .z=0, .flags=0, .item_bkg=&player_bkg, .scene_item=&player_item};
+// player old position
 UBYTE opx, opy, opz;
 
 UBYTE joy, redraw, falling, room_changed;
 static UBYTE tmp;
-static scene_item_t player;
 static UBYTE scene_count;
 static enum scroll_dir sc_dir;
 
@@ -52,7 +59,7 @@ extern UWORD sys_time;
 
 void move_enemies() {
     static UBYTE change_dir;
-    static moving_item_t * enemy;
+    static clip_item_t * enemy;
     enemy = enemies;
     for (UBYTE i = 0u; i < enemies_count; i++) {
         change_dir = 0u;
@@ -88,6 +95,12 @@ void move_enemies() {
     }
 }
 
+void update_scene_item_coords(clip_item_t * item) {
+    item->scene_item->x = to_x(item->x, item->y, item->z), 
+    item->scene_item->y = to_y(item->x, item->y, item->z), 
+    item->scene_item->coords = to_coords(item->x, item->y, item->z);
+}
+
 void main() {
     SWITCH_RAM_MBC1(0);
 
@@ -102,8 +115,11 @@ void main() {
     set_bkg_tiles(0, 0, 20, 18, shadow_buffer);
 
     // initialize the player
-    opx = px, opy = py, opz = pz;
-    player.id = 0x09u, player.x = to_x(px, py, pz), player.y = to_y(px, py, pz), player.n = 0u, player.coords = to_coords(px, py, pz), player.next = 0;
+    player.scene_item->x = to_x(player.x, player.y, player.z), 
+    player.scene_item->y = to_y(player.x, player.y, player.z), 
+    player.scene_item->coords = to_coords(player.x, player.y, player.z);
+
+    opx = player.x, opy = player.y, opz = player.z;
 
     // copy scene to RAM
     scene_count = copy_scene(position->room, scene_items);
@@ -113,19 +129,16 @@ void main() {
         // decompress scene to 3D map
         scene_to_map(scene_items, &collision_buf);
 
-        // place the player into the scene
-        place_scene_item(scene_items, &player);
-
-        // update enemies positions and place them into the scene
-        if enemies_exist {
-            update_multiple_items_pos(enemies, enemies_count); 
-            place_multiple_items(scene_items, enemies, enemies_count);
-        }
-
         // redraw the scene into the shadow buffer
         redraw_scene(scene_items);
+        
     } else clear_map(&collision_buf);
     
+    // save background under the player
+    save_item_bkg(player);
+    // save background under the enemies
+    if enemies_exist iter_enemies(i, save_item_bkg(enemies[i]));
+
     // copy the tiles into vram
     copy_tiles();
 
@@ -134,61 +147,60 @@ void main() {
 
     SHOW_BKG;
 
-    room_changed = 0;
+    room_changed = 0, redraw = 1u;
 
     while (1) {
-        room_changed = redraw = 0u;
         // fall
         falling = 0;
-        if (pz > 0) {
-            tmp = collision_buf[px][pz - 1][py];
+        if (player.z > 0) {
+            tmp = collision_buf[player.x][player.z - 1][player.y];
             if ((tmp == 0u) || (tmp == 1u) || (tmp == 9u)) {
-                pz--, falling = 1u;
+                player.z--, falling = 1u;
             }
         }
         // walk
         if (!falling) {
             joy = joypad();
             if (joy & J_LEFT) {
-                if (!px) {
-                    room_changed = try_change_room(position->W, (px = max_scene_x - 1u, sc_dir = SC_WEST)); // go west
-                } else px--;
+                if (!player.x) {
+                    room_changed = try_change_room(position->W, (player.x = max_scene_x - 1u, sc_dir = SC_WEST)); // go west
+                } else player.x--;
             } else if (joy & J_RIGHT) {
-                if (px == (max_scene_x - 1u)) {
-                    room_changed = try_change_room(position->E, (px = 0u, sc_dir = SC_EAST)); // go east
-                } else px++;
+                if (player.x == (max_scene_x - 1u)) {
+                    room_changed = try_change_room(position->E, (player.x = 0u, sc_dir = SC_EAST)); // go east
+                } else player.x++;
             } else if (joy & J_UP) {
-                if (py == (max_scene_y - 1u)) {
-                    room_changed = try_change_room(position->N, (py = 0u, sc_dir = SC_NORTH)); // go north
-                } else py++;
+                if (player.y == (max_scene_y - 1u)) {
+                    room_changed = try_change_room(position->N, (player.y = 0u, sc_dir = SC_NORTH)); // go north
+                } else player.y++;
             } else if (joy & J_DOWN) {
-                if (!py) { 
-                    room_changed = try_change_room(position->S, (py = max_scene_y - 1u, sc_dir = SC_SOUTH)); // go south
-                } else py--;
+                if (!player.y) { 
+                    room_changed = try_change_room(position->S, (player.y = max_scene_y - 1u, sc_dir = SC_SOUTH)); // go south
+                } else player.y--;
             } else if (joy & J_A) {
                 waitpadup();
-                test_clipping();
+                test_clipping(player.item_bkg);
+            } else if (joy & J_B) {
+                waitpadup();
+                restore_item_bkg(player);
+                copy_tiles();
             }
         }
         if (!room_changed) {
             // check collisions
-            if (!((opx == px) && (opy == py) && (opz == pz))) {
-                tmp = collision_buf[px][pz][py];
+            if (!((opx == player.x) && (opy == player.y) && (opz == player.z))) {
+                tmp = collision_buf[player.x][player.z][player.y];
                 if ((tmp == 0u) || (tmp == 1u) || (tmp == 9u)) {
                     redraw = 1u;
                 } else if (tmp == 5u) {
-                    pz++, redraw = 1u;
+                    player.z++, redraw = 1u;
                 } else {
-                    px = opx, py = opy, pz = opz;
+                    player.x = opx, player.y = opy, player.z = opz;
                 }
             }
             // move enemies
             if (enemies_exist && (redraw || (!((UBYTE)sys_time & 7)))) move_enemies();
         } else {
-            // remove enemies from the old scene
-            if enemies_exist remove_multiple_items(scene_items, enemies, enemies_count);
-            // remove player from the old scene
-            remove_scene_item(scene_items, &player);
             // clear the shadow buffer
             clear_shadow_buffer();
             // decompress scene to 3D map     
@@ -199,35 +211,36 @@ void main() {
         // redraw
         if (redraw) {
             if (scene_count) {
-                if enemies_exist {                
-                    // erase enemies from the screen
-                    erase_multiple_items(enemies, enemies_count);
-                    // update enemies positions on screen
-                    update_multiple_items_pos(enemies, enemies_count);
+                if (!room_changed) {
+                    // restore background under the enemies
+                    if enemies_exist rev_iter_enemies(i, restore_item_bkg(enemies[i-1]));
+                    // restore background under the player
+                    restore_item_bkg(player);
                 }
-                // remove player from the screen
-                erase_item(&player);
+                
                 // set the new position of the player item
-                player.x = to_x(px, py, pz), player.y = to_y(px, py, pz), player.coords = to_coords(px, py, pz);
-                
-                // remove enemies from the scene
-                if enemies_exist remove_multiple_items(scene_items, enemies, enemies_count);
-                
-                // move the player in the sorted scene list to the new position
-                remove_scene_item(scene_items, &player);
-                place_scene_item(scene_items, &player);
-                
-                // place enemies to the scene
-                if enemies_exist place_multiple_items(scene_items, enemies, enemies_count);
-                
-                // redraw the scene
-                redraw_scene(scene_items);
+                update_scene_item_coords(&player);
+                // set the new position for each enemy item
+                if enemies_exist iter_enemies(i, update_scene_item_coords(&enemies[i]));
+                                    
+                if (room_changed) redraw_scene(scene_items);
+
+                // save background under the player
+                save_item_bkg(player);
+                // save background under the enemies
+                if enemies_exist iter_enemies(i, save_item_bkg(enemies[i]));
+
+                // output enemies
+                if enemies_exist iter_enemies(i, draw_item(scene_items, &enemies[i]));
+                // output player
+                draw_item(scene_items, &player);
             }
             if (!room_changed) {
                 wait_vbl_done();
                 copy_tiles();                
             } else scroll_out(sc_dir, 1, 2); 
-            opx = px, opy = py, opz = pz;
+            opx = player.x, opy = player.y, opz = player.z;
         } else wait_vbl_done();
+        room_changed = redraw = 0u;
     }
 }
