@@ -38,6 +38,4 @@ void apply_inverse_mask(item_bitmap_t * sour, item_bitmap_t * mask, item_bitmap_
 // calculate clipping and draw item to the shadow buffer
 void draw_item(scene_item_t * scene, clip_item_t * item);
 
-void test_clipping(item_bitmap_t * dest);
-
 #endif

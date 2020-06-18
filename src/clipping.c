@@ -247,6 +247,9 @@ void merge_inverse_masks(scene_item_t * item, scene_item_t * new_item, unsigned 
     static UBYTE x, y;
     if (!item) return;
     x = new_item->x, y = new_item->y;
+    // skip items with lower or equal 3D coords
+    while ((item) && ((item->coords) <= new_item->coords)) item = item->next;
+    // iterate through the rest of the scene
     while (item) {
         if (x == item->x) {
             ydist = y - item->y;
@@ -466,7 +469,7 @@ void calculate_mask(scene_item_t * scene, scene_item_t * new_item, item_bitmap_t
         if (l) item += l - 1; else item--;
     } else item += l;
 
-    merge_inverse_masks(item->next, new_item, (unsigned char *)dest);
+    merge_inverse_masks(item, new_item, (unsigned char *)dest);
 }
 
 void apply_inverse_mask(item_bitmap_t * sour, item_bitmap_t * mask, item_bitmap_t * dest) {
@@ -536,12 +539,4 @@ void draw_item(scene_item_t * scene, clip_item_t * item) {
     calculate_mask(scene, item->scene_item, &temp_mask);
     apply_inverse_mask((item_bitmap_t *)(&__tiles[(int)(item->scene_item->id) << 7u]), &temp_mask, &temp_bitmap);
     draw_masked_bitmap_XY(item->scene_item->x, item->scene_item->y, (unsigned char *)&temp_bitmap, (unsigned char *)&temp_mask);
-}
-
-static const unsigned char tls[4] = {200,202,201,203};
-static UBYTE i = 5;
-void test_clipping(item_bitmap_t * dest) {
-    set_bkg_data(tls[0], 4, (unsigned char *)dest);
-    set_bkg_tiles(0, 0, 2, 2, tls);
-    i++; if (i == 18) i = 0;
 }

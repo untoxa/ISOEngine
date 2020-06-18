@@ -32,10 +32,13 @@ const world_item_t * position = &world[0];
 // enemies
 #define enemies_count 2
 item_bitmap_t enemies_bkg[enemies_count];
-scene_item_t enemies_itm[enemies_count] = {{.id=0x0bu, .n=0, .next=0}, {.id=0x0bu, .n=0, .next=0}};
+scene_item_t enemies_itm[enemies_count] = {
+    {.id=0x0bu, .n=0, .next=0}, 
+    {.id=0x0bu, .n=0, .next=0}
+};
 clip_item_t enemies[enemies_count] = {
-    {.x=0, .y=0, .z=0, .flags=0, .item_bkg=&enemies_bkg[0], .scene_item=&enemies_itm[0]}, 
-    {.x=0, .y=3, .z=0, .flags=0, .item_bkg=&enemies_bkg[1], .scene_item=&enemies_itm[1]}
+    {.x=3, .y=0, .z=0, .flags=0, .item_bkg=&enemies_bkg[0], .scene_item=&enemies_itm[0]}, 
+    {.x=2, .y=3, .z=0, .flags=0, .item_bkg=&enemies_bkg[1], .scene_item=&enemies_itm[1]}
 };
 const scene_item_t * enemies_room = r2; // enemies only exist in room2
 #define enemies_exist (position->room == enemies_room)
@@ -95,12 +98,6 @@ void move_enemies() {
     }
 }
 
-void update_scene_item_coords(clip_item_t * item) {
-    item->scene_item->x = to_x(item->x, item->y, item->z), 
-    item->scene_item->y = to_y(item->x, item->y, item->z), 
-    item->scene_item->coords = to_coords(item->x, item->y, item->z);
-}
-
 void main() {
     SWITCH_RAM_MBC1(0);
 
@@ -133,14 +130,13 @@ void main() {
         redraw_scene(scene_items);
         
     } else clear_map(&collision_buf);
+    // copy the tiles into vram
+    copy_tiles();
     
     // save background under the player
     save_item_bkg(player);
     // save background under the enemies
     if enemies_exist iter_enemies(i, save_item_bkg(enemies[i]));
-
-    // copy the tiles into vram
-    copy_tiles();
 
     // output the viewport
     set_view_port(1, 2);
@@ -177,14 +173,7 @@ void main() {
                 if (!player.y) { 
                     room_changed = try_change_room(position->S, (player.y = max_scene_y - 1u, sc_dir = SC_SOUTH)); // go south
                 } else player.y--;
-            } else if (joy & J_A) {
-                waitpadup();
-                test_clipping(player.item_bkg);
-            } else if (joy & J_B) {
-                waitpadup();
-                restore_item_bkg(player);
-                copy_tiles();
-            }
+            } 
         }
         if (!room_changed) {
             // check collisions
@@ -219,9 +208,9 @@ void main() {
                 }
                 
                 // set the new position of the player item
-                update_scene_item_coords(&player);
+                update_multiple_items_pos(&player, 1);
                 // set the new position for each enemy item
-                if enemies_exist iter_enemies(i, update_scene_item_coords(&enemies[i]));
+                update_multiple_items_pos(enemies, enemies_count);
                                     
                 if (room_changed) redraw_scene(scene_items);
 
