@@ -12,10 +12,10 @@
 @set DEBUGGING=0
 @set OPTIMIZE=1
 
-@set CFLAGS=-mgbz80 --fsigned-char --no-std-crt0 -I %GBDK%include -I %GBDK%include\asm -I %SRC%include -I %OBJ% -c
+@set CFLAGS=-mgbz80 --fsigned-char --no-std-crt0 -I%GBDK%include -I%GBDK%include\asm -I%SRC%include -I%OBJ%. -c
 @set CFLAGS=%CFLAGS% --max-allocs-per-node 50000
 
-@set LFLAGS=-n -- -z -m -j -k%GBDKLIB%gbz80\ -lgbz80.lib -k%GBDKLIB%gb\ -lgb.lib 
+@set LFLAGS=-n -- -z -m -j -k%GBDKLIB%gbz80 -lgbz80.lib -k%GBDKLIB%gb -lgb.lib 
 @set LFLAGS=%LFLAGS% -yt2 -yo4 -ya4
 @set LFILES=%GBDKLIB%gb\crt0.o
 
