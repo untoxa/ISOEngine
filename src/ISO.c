@@ -15,6 +15,7 @@ static char buf[0x20];
 #include "scenes.h"
 #include "multiple.h"
 #include "effects.h"
+#include "transform.h"
 
 #include "rooms.h"
 
@@ -56,14 +57,16 @@ static UBYTE scene_count;
 static enum scroll_dir sc_dir;
 
 static enum scroll_dir anim_dir;
-static UBYTE anim_ids[4][2] = { 
+static UBYTE anim_ids[5][2] = {
+    {0x00u, 0x00u},
     {0x0eu, 0x0cu}, 
     {0x0du, 0x0cu},
     {0x0eu, 0x0cu}, 
     {0x0du, 0x0cu} 
 };
 static UBYTE anim_fall[2] = {0x0fu, 0x0cu}; 
-static UBYTE anim_climb[4][2] = { 
+static UBYTE anim_climb[5][2] = { 
+    {0x00u, 0x00u},
     {0x0eu, 0x0cu}, 
     {0x0du, 0x0cu},
     {0x0eu, 0x0cu}, 
@@ -143,7 +146,9 @@ void redraw_all(UBYTE room_changed) {
         wait_vbl_done();
         //copy_tiles();
         copy_dirty_tiles();
-    } else scroll_out(sc_dir, 1, 2); 
+    } else {
+        if (sc_dir == SC_NONE) copy_tiles(); else scroll_out(sc_dir, 1, 2); 
+    }
 }
 
 void main() {
@@ -290,7 +295,13 @@ void main() {
                     }
                 }
             } else if (joy & J_A) {
-                redraw = 1u;
+                // rotate scene ccw
+                rotate_scene(0);
+                // clear the shadow buffer
+                clear_shadow_buffer();
+                // redraw everything
+                sc_dir = SC_NONE;
+                redraw_all(1);
             } 
         }
         if (!room_changed) {

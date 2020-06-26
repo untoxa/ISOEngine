@@ -44,6 +44,7 @@ __endasm;
 static const unsigned char blank[18] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 void scroll_out(enum scroll_dir dir, UBYTE x, UBYTE y) __banked {
+    if (dir == SC_NONE) return;
     UBYTE pal = BGP_REG;
     for (UBYTE i = 0; i < 20; i++) {
         wait_vbl_done();

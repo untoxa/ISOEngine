@@ -789,3 +789,9 @@ replace restart {
 	ld	%1,%2
 	; modified z80 peephole 176 remove unnecessary load back
 } if notVolatile(%1), notVolatile(%2), notSame(%1 '(hl+)'), notSame(%1 '(hl-)'), notSame(%2 '(hl+)'), notSame(%2 '(hl-)')
+
+replace {
+ call	___sdcc_call_hl
+} by {
+ rst	0x20	; ___sdcc_call_hl
+}

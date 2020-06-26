@@ -24,7 +24,7 @@
 @if %1. == debug. (
     @echo Debugging mode ON
     @set DEBUGGING=1
-@rem    @set CFLAGS=%CFLAGS% --debug
+    @set CFLAGS=%CFLAGS% --debug
 )
  
 @if %1. == profile. (
@@ -46,11 +46,6 @@
 
 @if not exist %OBJ% mkdir %OBJ%
 
-@echo ASSEMBLING THE STUB...
-
-sdasgb %ASMFLAGS% %OBJ%MBC1_RAM_INIT.rel %SRC%MBC1_RAM_INIT.s
-@set LFILES=%LFILES% %OBJ%MBC1_RAM_INIT.rel
-
 @echo COMPILING RESOURCES...
 
 @for %%x in (
@@ -71,6 +66,10 @@ sdasgb %ASMFLAGS% %OBJ%MBC1_RAM_INIT.rel %SRC%MBC1_RAM_INIT.s
 @echo COMPILING...
 
 @for %%x in (
+        MBC1_RAM_INIT.s
+       ) do call :doassemble %SRC% %%x
+
+@for %%x in (
         shadow.c
         mapping.c
         clipping.c
@@ -78,17 +77,24 @@ sdasgb %ASMFLAGS% %OBJ%MBC1_RAM_INIT.rel %SRC%MBC1_RAM_INIT.s
         multiple.c
         effects.c
         misc_resources.c
+	transform.c
+        %PROJ%.c
        ) do call :docompile %SRC% %%x
 
-sdcc %CFLAGS% %SRC%%PROJ%.c -o %OBJ%%PROJ%.rel
-
 @echo LINKING...
-%GBDK%bin\link-gbz80 %LFLAGS% %PROJ%.gb %LFILES% %OBJ%%PROJ%.rel 
+%GBDK%bin\link-gbz80 %LFLAGS% %PROJ%.gb %LFILES%
 
 @echo DONE!
 @goto :eof
 
 :docompile
+@echo %2
 sdcc %CFLAGS% %1%2 -o %OBJ%%2.rel
+@set LFILES=%LFILES% %OBJ%%2.rel
+goto :eof
+
+:doassemble
+@echo %2
+sdasgb %ASMFLAGS% %OBJ%%2.rel %1%2
 @set LFILES=%LFILES% %OBJ%%2.rel
 goto :eof

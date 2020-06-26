@@ -417,13 +417,12 @@ void place_scene_item(scene_item_t * scene, scene_item_t * new_item) {
         if (c < 0) l = i + 1u; else h = i - 1u;
     }
     
-    if (c > 0) {
-        // if not found then correct the place for item insertion
-        if (l) item += l - 1; else item--;
-    } else {
-        if (l == scene_items_count) l--;
-        item += l;
-    }
+    if (l < scene_items_count) {
+        c = (int)((item + l)->coords) - (int)new_item->coords;
+        if (c > 0) {
+            if (l) item += l - 1; else item--;
+        } else item += l; 
+    } else item = scene + scene_items_count;
 
     new_item->next = item->next, new_item->n = item->n;
     item->next = new_item;
@@ -431,13 +430,13 @@ void place_scene_item(scene_item_t * scene, scene_item_t * new_item) {
 
 UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
     static scene_item_t * src, * dst;
-    UBYTE count, id = 1u;
+    static UBYTE count;
 
     src = (scene_item_t *)sour, dst = dest;
-    count = 0u;
+    count = 1u;
 
     // zero item must always exist to simplify insertion of objects; it is not drawn
-    dst->id = 0xffu, dst->x = 0u, dst->y = 0u, dst->n = id, dst->coords = 0u, dst->next = dst + 1;
+    dst->id = 0xffu, dst->x = 0u, dst->y = 0u, dst->n = 1u, dst->coords = 0u, dst->next = dst + 1;
     dst++;
 
     while (src) {
@@ -446,15 +445,14 @@ UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
         dst->y = src->y;
         dst->coords = src->coords;
         src = src->next;
-        dst->n = ++id;
-        count++;
+        dst->n = ++count;
         if (count == 254u) src = 0;
         if (src) dst->next = dst + 1; else dst->next = 0;
         dst++;
     }
 
-    scene_items_count = count;
-    return count;
+    scene_items_count = count - 1;
+    return scene_items_count;
 }
 
 void clear_map(scene_t * dest) {
