@@ -299,6 +299,9 @@ void main() {
                 rotate_scene(0);
                 // clear the shadow buffer
                 clear_shadow_buffer();
+                // change player pos                
+                tmp = player.y, player.y = player.x, player.x = max_scene_x - tmp - 1;
+//                rotate(<i,j>)=<j,m-i-1>
                 // redraw everything
                 sc_dir = SC_NONE;
                 redraw_all(1);
