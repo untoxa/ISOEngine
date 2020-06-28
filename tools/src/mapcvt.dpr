@@ -8,13 +8,15 @@ var   data         : pAnsiChar;
       x,y,z        : longint;
       lst          : tStringList;
       rooms, world : tStringList;
-      i, sz        : longint;
+      i, j, sz     : longint;
       ini          : tIniFile;
       outfile      : tMemoryStream;
       outhdr       : tMemoryStream;
       bank         : longint;
       outname      : ansistring;
       outpath      : ansistring;
+      modifier     : ansistring;
+      includes     : tStringList;
 
 function LoadWorld(aini: tIniFile; const aworldname: ansistring): boolean;
   function GetRoomById(aid: ansichar): ansistring;
@@ -60,7 +62,7 @@ begin
       for x:= 0 to length(row) - 1 do begin
         rum:= GetRoomById(row[x + 1]);
         if length(rum) > 0 then begin
-          idx:= SetRoomProperty(x, y, format('.room=%s', [rum]), true);
+          idx:= SetRoomProperty(x, y, format('.room=%s, .room_bank=%d', [rum, bank]), true);
 
           SetRoomProperty(x - 1, y, format('.N=&%s[%d]', [aworldname, idx]), false);
           idx2:= GetWorldIndex(x - 1, y); if (idx2 >= 0) then SetRoomProperty(x, y, format('.S=&%s[%d]', [aworldname, idx2]), false);
@@ -121,7 +123,7 @@ var i, j, k : longint;
   begin result:= byte(adata[(dz * x * y) + (dx * y) + dy]); end;
 begin
   cnt:= 1;
-  writestr(res, format('const scene_item_t %s[] = {'#$0d#$0a, [aroom]));
+  writestr(res, format('%sconst scene_item_t %s[] = {'#$0d#$0a, [modifier, aroom]));
   for i:= 0 to x - 1 do
     for j:= y - 1 downto 0 do
       for k:= 0 to z - 1 do begin
@@ -144,6 +146,7 @@ begin
     outpath:= extractfilepath(paramstr(2));
     outfile:= tMemoryStream.create;
     outhdr:= tMemoryStream.create;
+    includes:= tStringList.Create;
     world:= tStringList.Create;
     rooms:= tStringList.Create;
     rooms.Sorted:= True; rooms.Duplicates:= dupIgnore;
@@ -151,9 +154,13 @@ begin
     try
       ini:= tIniFile.Create(paramstr(1));
       with ini do try
+
         bank:= ReadInteger(sec_sys, 'bank', 0);
+        modifier:= ReadString(sec_sys, 'modifier', ''); if (length(modifier) > 0) then modifier:= modifier + ' ';
+        includes.CommaText:= ReadString(sec_sys, 'includes', '');
         voc:= ReadString(sec_sys, 'voc', '');
         lst.CommaText:= ReadString(sec_sys, 'XYZ', '0,0,0');
+
         if (lst.count = 3) then begin
           x:= strtointdef(lst[0], 0);
           y:= strtointdef(lst[1], 0);
@@ -168,12 +175,18 @@ begin
                 if LoadRoom(ini, rum, data) then begin
                   if (outfile.Size = 0) then begin
                     if (bank > 0) then writestr(outfile, format('#pragma bank %d'#$0d#$0a#$0d#$0a, [bank]));
-                    writestr(outfile, format('#include "%s"'#$0d#$0a#$0d#$0a, [changefileext(outname, '.h')]));
+                    if (includes.Count > 0) then begin
+                       for j:= 0 to includes.count - 1 do writestr(outfile, format('#include "%s"'#$0d#$0a, [includes[j]]));
+                       writestr(outfile, #$0d#$0a);
+                    end;
                   end;
                   if (outhdr.Size = 0) then begin
-                    writestr(outhdr, format('#ifndef %s_h_INCLUDE'#$0d#$0a, [filterchars(outname, '.,:;"''/\[]{}')]));
-                    writestr(outhdr, format('#define %s_h_INCLUDE'#$0d#$0a#$0d#$0a, [filterchars(outname, '.,:;"''/\[]{}')]));
-                    writestr(outhdr, '#include "scenes.h"'#$0d#$0a#$0d#$0a);
+                    writestr(outhdr, format('#ifndef __%s_H_INCLUDE'#$0d#$0a, [filterchars(outname, '.,:;"''/\[]{}')]));
+                    writestr(outhdr, format('#define __%s_H_INCLUDE'#$0d#$0a#$0d#$0a, [filterchars(outname, '.,:;"''/\[]{}')]));
+                    if (includes.Count > 0) then begin
+                       for j:= 0 to includes.count - 1 do writestr(outhdr, format('#include "%s"'#$0d#$0a, [includes[j]]));
+                       writestr(outhdr, #$0d#$0a);
+                    end;
                   end;
                   Room2Source(rum, data, outfile);
                   writestr(outhdr, format('extern const scene_item_t %s[];'#$0d#$0a, [rum]));
@@ -187,7 +200,8 @@ begin
         if LoadWorld(ini, rum) then begin
           if world.count > 0 then begin
             // world
-            writestr(outfile, format(#$0d#$0a'const world_item_t %s[] = {'#$0d#$0a, [rum]));
+            modifier:= ini.ReadString(rum, 'modifier', ''); if (length(modifier) > 0) then modifier:= modifier + ' ';
+            writestr(outfile, format(#$0d#$0a'%sconst world_item_t %s[] = {'#$0d#$0a, [modifier, rum]));
             for i:= 0 to world.count - 1 do writestr(outfile, format('{%s}, '#$0d#$0a, [world[i]]));
             writestr(outfile, '};'#$0d#$0a);
             // header
@@ -197,6 +211,7 @@ begin
 
       finally free; end;
     finally
+      freeandnil(includes);
       freeandnil(lst);
       freeandnil(rooms);
       freeandnil(world);

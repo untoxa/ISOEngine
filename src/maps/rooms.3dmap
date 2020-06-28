@@ -1,7 +1,13 @@
 [system]
 
-; #pragma bank <bank>
-bank=1
+; #pragma bank <bank> for rooms
+bank=3
+
+; modifier for rooms (alternative banking)
+;modifier=CODE_3
+
+; list of #include
+includes=nonintrinsic.h,scenes.h
 
 ; 3D Scene dimentions (don't edit unless you know what are you doing)
 XYZ=9,9,4
@@ -18,6 +24,10 @@ world=world
 [world]
 ; number of rows
 rows=4
+
+; modifier for world array (alternative banking)
+modifier=CODE_1
+
 ; 2D global room map, each char is an ID of the room, unknown id means NULL room
 
 ;      W

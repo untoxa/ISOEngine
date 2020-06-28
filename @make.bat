@@ -70,6 +70,7 @@
        ) do call :doassemble %SRC% %%x
 
 @for %%x in (
+	nonintrinsic.c
         shadow.c
         mapping.c
         clipping.c

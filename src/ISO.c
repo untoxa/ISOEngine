@@ -9,6 +9,7 @@ static char buf[0x20];
 #endif
 
 #include "globals.h"
+#include "nonintrinsic.h"
 #include "shadow.h"
 #include "mapping.h"
 #include "clipping.h"
@@ -23,9 +24,6 @@ static char buf[0x20];
 #include "misc_resources.h"
 
 #define try_change_room(dir, action) ((dir) ? (position = (dir), (action), 1u) : 0u)
-
-// current bank tracking variable defined in crt0
-extern volatile __sfr _current_bank;
 
 // set initial position in the global world
 const world_item_t * position = &world[0];
@@ -152,10 +150,9 @@ void redraw_all(UBYTE room_changed) {
 }
 
 void main() {
-    SWITCH_RAM_MBC1(0);
+    SET_RAM_BANK(0);
+    SET_ROM_BANK(scene_resources.bank);
 
-    _current_bank = scene_resources.bank;
-    SWITCH_ROM_MBC1(_current_bank);
     initialize_tiles(scene_resources.data->data, empty_tiles);
     
     // clear the shadow buffer
@@ -170,7 +167,7 @@ void main() {
     player.scene_item->coords = to_coords(player.x, player.y, player.z);
 
     // copy scene to RAM
-    scene_count = copy_scene(position->room, scene_items);
+    scene_count = copy_scene(position->room_bank, position->room, scene_items);
 
     // if scene not empty
     if (scene_count) {
@@ -294,14 +291,12 @@ void main() {
                         redraw_all(0);                        
                     }
                 }
-            } else if (joy & J_A) {
+            } else if (joy & J_SELECT) {
                 // rotate scene ccw
-                rotate_scene(0);
+                rotate_scene(ROT_CCW);
+                rotate_scene_coords(ROT_CCW, &player.x, &player.y);
                 // clear the shadow buffer
                 clear_shadow_buffer();
-                // change player pos                
-                tmp = player.y, player.y = player.x, player.x = max_scene_x - tmp - 1;
-//                rotate(<i,j>)=<j,m-i-1>
                 // redraw everything
                 sc_dir = SC_NONE;
                 redraw_all(1);
@@ -317,8 +312,8 @@ void main() {
         } else {
             // clear the shadow buffer
             clear_shadow_buffer();
-            // decompress scene to 3D map     
-            scene_count = copy_scene(position->room, scene_items);
+            // decompress scene to 3D map
+            scene_count = copy_scene(position->room_bank, position->room, scene_items);
             if (scene_count) scene_to_map(scene_items, &collision_buf); else clear_map(&collision_buf);                
             redraw = 1u;
         }

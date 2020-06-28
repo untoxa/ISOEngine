@@ -21,6 +21,7 @@ check_size(scene_item_t, 8);
 typedef struct world_item_t {
     struct world_item_t * N, * E, * S, * W;
     struct scene_item_t * room;
+    UBYTE room_bank;
 } world_item_t;
 
 // pointer to tiles
@@ -45,7 +46,7 @@ void remove_scene_item(scene_item_t * scene, scene_item_t * new_item);
 void place_scene_item(scene_item_t * scene, scene_item_t * new_item);
 
 // copy pre-built scene
-UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest);
+UBYTE copy_scene(UBYTE bank, const scene_item_t * sour, scene_item_t * dest);
 
 // clear 3D map
 void clear_map(scene_t * dest);

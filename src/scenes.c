@@ -1,3 +1,4 @@
+#include "nonintrinsic.h"
 #include "scenes.h"
 #include "shadow.h"
 
@@ -428,9 +429,11 @@ void place_scene_item(scene_item_t * scene, scene_item_t * new_item) {
     item->next = new_item;
 }
 
-UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
+UBYTE copy_scene(UBYTE bank, const scene_item_t * sour, scene_item_t * dest) {
     static scene_item_t * src, * dst;
-    static UBYTE count;
+    static UBYTE count, savebank;
+
+    savebank = GET_ROM_BANK, SET_ROM_BANK(bank);
 
     src = (scene_item_t *)sour, dst = dest;
     count = 1u;
@@ -451,6 +454,8 @@ UBYTE copy_scene(const scene_item_t * sour, scene_item_t * dest) {
         dst++;
     }
 
+    SET_ROM_BANK(savebank);
+    
     scene_items_count = count - 1;
     return scene_items_count;
 }

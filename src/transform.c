@@ -1,4 +1,4 @@
-#pragma bank 1
+#pragma bank 2
 
 #include "transform.h"
 #include "shadow.h"
@@ -46,6 +46,18 @@ void map_to_scene(const scene_t * sour, scene_item_t * dest) {
     }
     scene_items_count = count - 1;
     dst->next = 0;
+}
+
+void rotate_scene_coords(enum rotate_dir dir, UBYTE * x, UBYTE * y) __banked {
+    UBYTE tmp;
+    switch (dir) {
+        case ROT_CW:
+            tmp = *x, *x = *y, *y = max_scene_y - tmp - 1;
+            break;
+        case ROT_CCW:
+            tmp = *y, *y = *x, *x = max_scene_x - tmp - 1;
+            break;
+    }
 }
 
 void rotate_scene(enum rotate_dir dir) __banked {
