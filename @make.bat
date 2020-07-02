@@ -10,13 +10,13 @@
 
 @set PROFILING=0
 @set DEBUGGING=0
-@set OPTIMIZE=1
+@set OPTIMIZE=0
 
 @set CFLAGS=-mgbz80 --fsigned-char --no-std-crt0 -I%GBDK%include -I%GBDK%include\asm -I%SRC%include -I%OBJ%. -c
 @set CFLAGS=%CFLAGS% --max-allocs-per-node 50000
 
 @set LFLAGS=-n -- -z -m -j -k%GBDKLIB%gbz80 -lgbz80.lib -k%GBDKLIB%gb -lgb.lib 
-@set LFLAGS=%LFLAGS% -yt2 -yo4 -ya4
+@set LFLAGS=%LFLAGS% -yt0x1a -yo4 -ya4
 @set LFILES=%GBDKLIB%gb\crt0.o
 
 @set ASMFLAGS=-plosgff -I%GBDKLIB%
@@ -30,6 +30,11 @@
 @if %1. == profile. (
     @set PROFILING=1 
     @echo Profilig mode ON
+)
+
+@if %1. == optimize. (
+    @set OPTIMIZE=1 
+    @echo Optimization rules ON
 )
 
 @if %OPTIMIZE%==1 @set CFLAGS=%CFLAGS% --peep-file peephole\gbz80.rul

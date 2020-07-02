@@ -1,9 +1,10 @@
 #include "globals.h"
+#include "nonintrinsic.h"
 #include "shadow.h"
 
-void set_RAM_bank1(void) __nonbanked __preserves_regs(b, c, d, e) { SWITCH_RAM_MBC1(1); }
+void set_RAM_bank0(void) __nonbanked __preserves_regs(b, c, d, e) { SET_RAM_BANK(0); }
 
-__addressmod set_RAM_bank1 DATA_0;
+__addressmod set_RAM_bank0 DATA_0;
 
 // shadow buffer in RAM1
 DATA_0 unsigned char shadow_buffer[(viewport_height * viewport_width * 16)];

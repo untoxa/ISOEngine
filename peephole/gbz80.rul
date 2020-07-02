@@ -1,14 +1,21 @@
 // must be all in one file
 // more info https://sourceforge.net/p/sdcc/code/HEAD/tree/trunk/sdcc/src/SDCCpeeph.c
 
+//replace {
+// xor	a, a
+//} by {
+// ; xor a to ld for better optmizations
+// ld	a, #0x00
+//} if notUsed('f')
+
 replace restart {
- ld	%1, h
- ld	%2, l
+ ld	%1, %3
+ ld	%2, %4
 } by {
  ; uniform order
- ld	%2, l
- ld	%1, h
-} if canAssign(%1%2 '#0x0001')
+ ld	%2, %4
+ ld	%1, %3
+} if canAssign(%1%2 '#0x0001'), notSame(%1, %4)
 
 replace restart {
  ld	hl, #%1 + %2
@@ -16,7 +23,7 @@ replace restart {
 } by {
  ; move dec to literal
  ld	hl, #%1 + %3
-} if immdInRange(0 65535 'sub' %2 1 %3)
+} if immdInRange(0 65535 '-' %2 1 %3)
 
 replace restart {
  ld	hl, #%1 - %2
@@ -24,7 +31,7 @@ replace restart {
 } by {
  ; move dec to literal
  ld	hl, #%1 - %3
-} if immdInRange(0 65535 'add' %2 1 %3)
+} if immdInRange(0 65535 '-' %2 1 %3)
 
 replace restart {
  ld	hl, #%1 + %2
@@ -32,7 +39,7 @@ replace restart {
 } by {
  ; move inc to literal
  ld	hl, #%1 + %3
-} if immdInRange(0 65535 'add' %2 1 %3)
+} if immdInRange(0 65535 '-' %2 1 %3)
 
 replace restart {
  ld	hl, #%1 - %2
@@ -40,53 +47,50 @@ replace restart {
 } by {
  ; move inc to literal
  ld	hl, #%1 - %3
-} if immdInRange(0 65535 'sub' %2 1 %3)
+} if immdInRange(0 65535 '-' %2 1 %3)
 
 
-
-replace {
- and	a, #0x%1%2
- swap	a
-} by {
- ; swap and and swap
- swap	a
- and	a, #0x%2%1
-}
-
-replace {
- ; redundant AND
- and	a, #0x0f
- and	a, #%1
-} by {
- and	a, #%1;2b 2c saved
-} if immdInRange(0 0x0f 'sub' 0x0f %1 %2)
 
 replace {
  and	a, #%1
- swap	a
- and	a, #0xf0
+ and	a, #%2
 } by {
- ; redundant AND
- and	a, #%1;2b 2c saved
- swap	a
-} if immdInRange(0 0x0f 'sub' 0x0f %1 %2)
+ ; remove redundant and
+ and	a, #%3
+} if immdInRange(0x0 0xff '&' %1 %2 %x3)
 
 replace {
- ; redundant AND
- and	a, #0xf0
- and	a, #%1
+ or	a, #%1
+ or	a, #%2
 } by {
- and	a, #%1;2b 2c saved
-} if immdInRange(0x10 0xf0 'sub' 0xf0 %1 %2)
+ ; remove redundant or
+ or	a, #%3
+} if immdInRange(0x0 0xff '|' %1 %2 %x3)
 
 
 
 replace {
+ ld	%2, (hl)
+ inc	hl
+ ld	%1, (hl)
+ dec	%1%2
+ dec	hl
+} by {
  ; ld	a, (hl+/-) is faster
+ ld	a, (hl+)
+ ld	%2, a
+ ld	a, (hl-)
+ ld	%1, a
+ dec	%1%2
+} if canAssign(%2 'a'), canAssign(%1 'a'), notUsed('a')
+
+replace {
  ld	a, (hl)
  dec	hl
 } by {
- ld	a, (hl-);save 1b 2c
+ ; ld	a, (hl+/-) is faster
+ ;save 1b 2c
+ ld	a, (hl-)
 }
 
 replace {
@@ -95,8 +99,8 @@ replace {
  ld	a, (hl%2)
 } by {
  ; hack until notUsed is available
- ld	a, (hl-);1b 2c
- ld	%1, a	;1b 1c
+ ld	a, (hl-)
+ ld	%1, a
  ld	a, (hl%2)
 } if canAssign(%1 'a')
 
@@ -106,8 +110,8 @@ replace {
  ld	a, (hl%2)
 } by {
  ; hack until notUsed is available
- ld	a, (hl+);1b 2c
- ld	%1, a	;1b 1c
+ ld	a, (hl+)
+ ld	%1, a
  ld	a, (hl%2)
 } if canAssign(%1 'a')
 
@@ -117,8 +121,8 @@ replace {
  ld	a, (hl%2)
 } by {
  ; hack until notUsed is available
- ld	a, %1	;1b 1c
- ld	(hl-),a;1b 2c
+ ld	a, %1
+ ld	(hl-),a
  ld	a, (hl%2)
 } if canAssign('a' %1)
 
@@ -128,32 +132,71 @@ replace {
  ld	a, (hl%2)
 } by {
  ; hack until notUsed is available
- ld	a, %1	;1b 1c
- ld	(hl+),a;1b 2c
+ ld	a, %1
+ ld	(hl+),a
  ld	a, (hl%2)
 } if canAssign('a' %1)
+
+replace {
+ ld	%1, (hl)
+ dec	hl
+} by {
+ ; ld	a, (hl+/-) is faster
+ ld	a, (hl-)
+ ld	%1, a
+} if canAssign(%1 'a'), notUsed('a')
 
 replace {
  ld	a, (hl)
  inc	hl
 } by {
- ld	a, (hl+);save 1b 2c
+ ;save 1b 2c
+ ld	a, (hl+)
 }
+
+replace {
+ ld	%1, (hl)
+ inc	hl
+} by {
+ ; ld	a, (hl+/-) is faster
+ ld	a, (hl+)
+ ld	%1, a
+} if canAssign(%1 'a'), notUsed('a')
 
 replace {
  ; ld	a, (hl+/-) is faster
  ld	(hl), a
  dec	hl
 } by {
- ld	(hl-), a;save 1b 2c
+ ;save 1b 2c
+ ld	(hl-), a
 }
+
+replace {
+ ld	(hl), %1
+ dec	hl
+} by {
+ ; ld	a, (hl+/-) is faster
+ ld	a, %1
+ ld	(hl-), a
+} if canAssign('a' %1), notUsed('a')
 
 replace {
  ld	(hl), a
  inc	hl
 } by {
- ld	(hl+), a;save 1b 2c
+ ;save 1b 2c
+ ld	(hl+), a
 }
+
+replace {
+ ld	(hl), %1
+ inc	hl
+} by {
+ ; ld	a, (hl+/-) is faster
+ ld	a, %1
+ ld	(hl+), a
+} if canAssign('a' %1), notUsed('a')
 
 
 
@@ -170,7 +213,8 @@ replace {
  sla  %1
  rl   %2
 } by {
- push af ; backup
+ ; 16bit <<4
+ ; no backup needed
  ld   a, (hl)
  swap a
  ld   %1, a
@@ -179,7 +223,33 @@ replace {
  ld   a, %1
  and  a, #0xf0
  ld   %1, a
- pop  af ; restore
+} if canAssign(%2 'a'), canAssign(%1 'a'), canAssign('a' %1), notUsed('a')
+
+replace {
+ ld	  %1, (hl)
+ ld	  %2, #0x00
+ sla  %1
+ rl   %2
+ sla  %1
+ rl   %2
+ sla  %1
+ rl   %2
+ sla  %1
+ rl   %2
+} by {
+ ; 16bit <<4
+ ; backup
+ push af
+ ld   a, (hl)
+ swap a
+ ld   %1, a
+ and  a, #0x0f
+ ld   %2, a
+ ld   a, %1
+ and  a, #0xf0
+ ld   %1, a
+ ; restore
+ pop  af
 } if canAssign(%2 'a'), canAssign(%1 'a'), canAssign('a' %1)
 
 
@@ -198,54 +268,231 @@ replace restart {
 }
 // %2 can't be f
 
+// %1 and %3 must be single registers
 replace {
- xor	a, a
- push	af
+ ld	%1, %5
+ push	%1%2
  inc	sp
- xor	a, a
- push	af
- inc	sp
- xor	a, a
- push	af
+ ld	%3, %6
+ push	%3%4
  inc	sp
 } by {
- ; three 0 arguments
- xor	a, a
- push	af
+ ; load via 16bit reg
+ ld c, %6
+ ld b, %5
+ push	bc
+} if notUsed('b'), notUsed('c'), canAssign(%1 'b'), canAssign(%3 'b'), notUsed(%1), notUsed(%3), notSame(%5 'b' 'c' '(ld+)' '(ld-)'), notSame(%6 'b' 'c' '(ld+)' '(ld-)')
+
+replace {
+ ld	%1, %5
+ push	%1%2
  inc	sp
- xor	a, a
- push	af
+ ld	%3, %6
+ push	%3%4
  inc	sp
- push	af
+} by {
+ ; load via 16bit reg
+ ld e, %6
+ ld d, %5
+ push	de
+} if notUsed('d'), notUsed('e'), canAssign(%1 'b'), canAssign(%3 'b'), notUsed(%1), notUsed(%3), notSame(%5 'd' 'e' '(ld+)' '(ld-)'), notSame(%6 'd' 'e' '(ld+)' '(ld-)')
+
+replace {
+ ld	%1, %5
+ push	%1%2
  inc	sp
-}
+ ld	%3, %6
+ push	%3%4
+ inc	sp
+} by {
+ ; load via 16bit reg
+ ld l, %6
+ ld h, %5
+ push	hl
+} if notUsed('h'), notUsed('l'), canAssign(%1 'b'), canAssign(%3 'b'), notUsed(%1), notUsed(%3), notSame(%5 'h' 'l' '(ld+)' '(ld-)'), notSame(%6 'h' 'l' '(ld+)' '(ld-)')
 
 replace {
  xor	a, a
  push	af
  inc	sp
- xor	a, a
+ ld	a, #%1
  push	af
  inc	sp
 } by {
- ; even faster than ld bc, #0
- xor	a, a	; 1b 1c ; a=0
- rra		; 1b 1c ; f=0
- push	af	; 3b 8c saved
-}
+ ; load into ram via bc
+ ld	bc, #%1
+ push bc
+} if notUsed('bc'), notUsed('a'), notUsed('f')
 
 replace {
  xor	a, a
  push	af
  inc	sp
- ld	a, #0x80
+ ld	a, #%1
  push	af
  inc	sp
 } by {
- ; no idea if somebody needs this
- xor	a, a	; 1b 1c ; a=0 f=0x80
- push	af	; 5b 9c saved
+ ; load into ram via hl
+ ld	hl, #%1
+ push hl
+} if notUsed('hl'), notUsed('a'), notUsed('f')
+
+
+replace {
+ xor	a, a
+ push	af
+ inc	sp
+ ld	a, #%1
+ push	af
+ inc	sp
+} by {
+ ; load into ram via de
+ ld	de, #%1
+ push de
+} if notUsed('de'), notUsed('a'), notUsed('f')
+
+replace {
+ xor	a, a
+ push	af
+ inc	sp
+ ld	a, #%1
+ push	af
+ inc	sp
+} by {
+ ; load into ram via bc and keep af intact
+ xor	a, a
+ ld	bc, #%1
+ push bc
+ ld	a, c
+} if notUsed('bc')
+
+replace {
+ ld	a, #0x%1
+ push	af
+ inc	sp
+ xor	a, a
+ push	af
+ inc	sp
+} by {
+ ; load into ram via bc
+ xor	a, a
+ ld	bc, #0x%1%2%2
+ push bc
+} if notUsed('bc'), immdInRange(0 65536 '+' 0 0 %2)
+
+
+
+replace {
+ push	%1%2
+ inc	sp
+ push	%3%4
+ inc	sp
+} by {
+ ; load from everything through %1%2
+ ld	%2, %3
+ push	%1%2
+} if notUsed(%2)
+
+replace {
+ push	%1%2
+ inc	sp
+ push	%3%4
+ inc	sp
+} by {
+ ; load from everything through bc
+ ld	b, 1%
+ ld	c, 3%
+ push	bc
+} if notUsed('bc'), notSame('b' %3)
+
+replace {
+ push	%1%2
+ inc	sp
+ push	%3%4
+ inc	sp
+} by {
+ ; load from everything through de
+ ld	d, 1%
+ ld	e, 3%
+ push	de
+} if notUsed('de'), notSame('d' %3)
+
+replace {
+ ld	%1, (hl)
+ push	%1%2
+ inc	sp
+ ld	hl, #%5
+ ld	%3, (hl)
+ push	%3%4
+ inc	sp
+} by {
+ ; load from (hl) to bc
+ ld	b, (hl)
+ ld	hl, #%5
+ ld	c, (hl)
+ push	bc
+} if notUsed(%1), notUsed(%3), notUsed('bc')
+
+replace {
+ ld	%1, (hl)
+ push	%1%2
+ inc	sp
+ ld	hl, #%5
+ ld	%3, (hl)
+ push	%3%4
+ inc	sp
+} by {
+ ; load from (hl) to de
+ ld	d, (hl)
+ ld	hl, #%5
+ ld	e, (hl)
+ push	de
+} if notUsed(%1), notUsed(%3), notUsed('de')
+
+replace {
+ ld	%1, (hl)
+ push	%1%2
+ inc	sp
+ ldhl sp, #%5
+ ld	%3, (hl)
+ push	%3%4
+ inc	sp
+} by {
+ ; load from (hl) to bc
+ ld	b, (hl)
+ ldhl sp, #%5 - 1
+ ld	c, (hl)
+ push	bc
+} if notUsed(%1), notUsed(%3), notUsed('bc')
+
+replace {
+ ld	%1, (hl)
+ push	%1%2
+ inc	sp
+ ldhl sp, #%5
+ ld	%3, (hl)
+ push	%3%4
+ inc	sp
+} by {
+ ; load from (hl) to de
+ ld	d, (hl)
+ ldhl sp, #%5 - 1
+ ld	e, (hl)
+ push	de
+} if notUsed(%1), notUsed(%3), notUsed('de')
+
+replace {
+ push	%1%2
+ inc	sp
+ ld	a, %2
+ push	af
+ inc	sp
+} else {
+ ; push	%1%2 in one go
+ push	%1%2
+ ld	a, %2
 }
+
 
 replace {
  ld	%1, #%3
@@ -284,20 +531,20 @@ replace {
 }
 
 replace {
- ld	a, #%1
+ ld	a, (hl)
  push	af
  inc	sp
- ld	a, #%2
+ dec	hl
+ ld	a, (hl)
  push	af
  inc	sp
 } by {
- ld	a, #%1
- push	af
- inc	sp
- inc	a ; previous paramater
- push	af
- inc	sp
-} if immdInRange(1 1 'sub' %2 %1 %3)
+ ; improved push from ram
+ ld	a, (hl-)
+ ld	b, a
+ ld	c, (hl)
+ push	bc
+} if notUsed('b'), notUsed('c'), notUsed('a')
 
 replace {
  ld	a, #%1
@@ -310,10 +557,28 @@ replace {
  ld	a, #%1
  push	af
  inc	sp
- dec	a ; previous paramater
+ ; previous parameter
+ inc	a
  push	af
  inc	sp
-} if immdInRange(1 1 'sub' %1 %2 %3)
+} if immdInRange(1 1 '-' %2 %1 %3)
+
+replace {
+ ld	a, #%1
+ push	af
+ inc	sp
+ ld	a, #%2
+ push	af
+ inc	sp
+} by {
+ ld	a, #%1
+ push	af
+ inc	sp
+ ; previous parameter
+ dec	a
+ push	af
+ inc	sp
+} if immdInRange(1 1 '-' %1 %2 %3)
 
 replace {
  xor	a, a
@@ -326,6 +591,7 @@ replace {
  xor	a, a
  push	af
  inc	sp
+ ; ld	a, #0x01
  inc	a
  push	af
  inc	sp
@@ -342,6 +608,7 @@ replace {
  xor	a, a
  push	af
  inc	sp
+ ; ld	a, #0xff
  dec	a
  push	af
  inc	sp
@@ -369,7 +636,8 @@ replace {
  set	%2, a
  ld	hl, #%1
  ld	(hl), a
-} by {	
+} by {
+ ; set (hl) directly
  ld	hl, #%1
  set	%2, (hl)
  ld	a, (hl)
@@ -388,6 +656,7 @@ replace {
  res	%2, a
  ld	hl, #%1
 } by {
+ ; just a helper for the following
  ld	hl, #%1
  res	%2, a
 }
@@ -397,6 +666,7 @@ replace {
  ld	a, (hl)
  ld	hl, #0xff%2
 } by {
+ ; don't load the same value into l twice
  ld	l, #0x%2
  ld	a, (hl)
  ld	h, #0xff
@@ -414,7 +684,7 @@ replace {
  ld	l, #%2
  ld	(hl), #%1
  inc	l
-} if immdInRange(1 1 'sub' %3 %2 %4)
+} if immdInRange(1 1 '-' %3 %2 %4)
 
 replace {
  ld	l, #%2
@@ -425,7 +695,7 @@ replace {
  ld	l, #%2
  ld	(hl), #%1
  dec	l
-} if immdInRange(1 1 'sub' %2 %3 %4)
+} if immdInRange(1 1 '-' %2 %3 %4)
 
 
 replace{
@@ -435,6 +705,7 @@ replace{
 } by {
  xor	a, a
  ld	(%1), a
+ ; ld	a, #0x0
  inc	a
 }
 
@@ -443,7 +714,7 @@ replace{
  add %3, #%1
  add %3, #%2
 } by {
- ; dublicated add
+ ; duplicated add
  add %3, #%1+%2
 }
 
@@ -454,8 +725,8 @@ replace {
  inc	a
  ld	(%1%2), a
 } by {
- ;
- inc	(hl);1byte smaller 
+ ; inc (hl) directly - 1byte smaller
+ inc	(hl)
  ld	a, (hl)
  ld	%2, l
  ld	%1, h
@@ -497,7 +768,7 @@ replace {
  jr	%3,%4
  sub	a, #%8
  jp	%6,%7
-} if immdInRange(0 255 'sub' %5 %2 %8)
+} if immdInRange(0 255 '-' %5 %2 %8)
 
 replace restart {
  ld	a,(hl)
@@ -531,6 +802,518 @@ replace {
  ld	h, a
 }
 
+replace {
+ ld	(hl), a
+ ld	l, (hl)
+} by {
+ ; saves one cycle
+ ld	(hl), a
+ ld	l, a
+}
+
+// 6b 7c vs 5b 6c
+replace{
+ ld	l, a
+ ld	h, #0x00
+ add	hl, %1%2
+ ld	%2, l
+ ld	%1, h
+} by {
+ ; improved 8bit and 16bit addition
+ add	a, %2
+ ld	%2, a
+ adc	a, %1
+ sub	a, %2
+ ld	%1, a
+} if notUsed('a'), notUsed('h'), notUsed('l')
+
+// 7b 9c vs 7b 8c
+replace{
+ ld	%1, (hl)
+ ld	hl, #0x00%3
+ add	hl, %1%2
+ ld	%2, l
+ ld	%1, h
+} by {
+ ; improved 8bit and 16bit addition
+ ld	a, %2
+ add	a, #0x%3
+ ld	%2, a
+ adc	a, (hl)
+ sub	a, %2
+ ld	%1, a
+} if notUsed('a'), notUsed('h'), notUsed('l')
+
+//!! increases size
+// 5b 9c vs 7b 7c
+replace{
+ ld	b, %1
+ inc	bc
+ inc	bc
+ inc	bc
+ inc	bc
+} by {
+ ; 16bit +4
+ ld	a, c
+ add	a, #0x04
+ ld	c, a
+ adc	a, %1
+ sub	c
+ ld	b, a
+} if notUsed('a'), notSame(%1 'a'), notSame(%1 'c')
+
+replace{
+ ld	a, #0x%3
+ push	af
+ inc	sp
+ push	%1%2
+ inc	sp
+} by {
+ ; combine push
+ ld %2, %1
+ ld	%1, #0x%3
+ push	%1%2
+} if notUsed('a'), notUsed(%1), notUsed(%2), canAssign(%2 %1)
+
+replace{
+ ld	a, #0x%3
+ push	af
+ inc	sp
+ push	%1%2
+ inc	sp
+} by {
+ ; push through hl
+ ld	h, #0x%3
+ ld l, %1
+ push	hl
+} if notUsed('a'), notUsed('h'), notUsed('l'), canAssign('l' %1)
+
+// this is used in for headers
+replace{
+ ldhl	sp,	#%1
+ ld	a, (hl+)
+ ld	%4, (hl)
+ ldhl	sp,	#%2
+ ld	(hl+), a
+ ld	(hl), %4
+ ldhl	sp,	#%1
+ ld	a, (hl+)
+ ld	%4, (hl)
+ ldhl	sp,	#%3
+} by {
+ ; just load a and %4 once
+ ldhl	sp,	#%1
+ ld	a, (hl+)
+ ld	%4, (hl)
+ ldhl	sp,	#%2
+ ld	(hl+), a
+ ld	(hl), %4
+ ldhl	sp,	#%3
+}
+
+replace{
+ ldhl	sp,	#%1
+ ld	a, (hl+)
+ ld	%4, (hl)
+ %2	hl
+ ld	(hl+), a
+ ld	(hl), %4
+ ldhl	sp,	#%1
+ ld	a, (hl+)
+ ld	%4, (hl)
+ ldhl	sp,	#%3
+} by {
+ ; just load a and %4 once
+ ldhl	sp,	#%1
+ ld	a, (hl+)
+ ld	%4, (hl)
+ %2	hl
+ ld	(hl+), a
+ ld	(hl), %4
+ ldhl	sp,	#%3
+}
+
+replace {
+ ld	a, (hl)
+ cpl
+ ld	%1, a
+ inc	hl
+} by {
+ ; use hl+ in complex situation
+ ld	a, (hl+)
+ cpl
+ ld	%1, a
+} if notSame(%1 '(hl)' '(hl-)' '(hl+)' 'a')
+
+replace {
+ ld	a, (hl)
+ cpl
+ ld	%1, a
+ inc	%1%2
+ dec	hl
+} by {
+ ; use hl- in complex situation
+ ld	a, (hl-)
+ cpl
+ ld	%1, a
+ inc	%1%2
+} if notSame(%1 '(hl)' '(hl-)' '(hl+)' 'a')
+
+// especially needed by SHOW_BKG etc
+replace {
+ ldh	a, (%1)
+ or	a, #%2
+ ldh	(%1), a
+ ldh	a, (%1)
+ or	a, #%3
+ ldh	(%1), a
+} by {
+ ; switched to ldh (c)
+ ld	c, #<(%1)
+ ldh	a, (c)
+ or	a, #%2
+ ldh	(c), a
+ ldh	a, (c)
+ or	a, #%3
+ ldh	(c), a ; c is #<(%1)
+} if notUsed('c'), notSame(%1 'c')
+
+replace {
+ ldh	(c), a ; c is #<(%1)
+ ldh	a, (%1)
+ or	a, #%2
+ ldh	(%1), a
+} by {
+ ; switched to ldh (c)
+ ldh	(c), a
+ ldh	a, (c)
+ or	a, #%2
+ ldh	(c), a ; c is #<(%1)
+} if notSame(%1 'c')
+
+replace {
+ ld	a, (hl)
+ or	a, %1
+ push	af
+ inc	hl
+} by {
+ ; use hl+ even if or and push are between them
+ ld	a, (hl+)
+ or	a, %1
+ push	af
+} if notSame(%1 'hl')
+
+replace {
+ ld	a, (hl)
+ or	a, %1
+ ld	%1, a
+ inc	hl
+} by {
+ ; use hl+ even if or and ld are between them
+ ld	a, (hl+)
+ or	a, %1
+ ld	%1, a
+} if notSame(%1 'hl')
+
+//x++ == 0
+replace {
+ ld	%1, (hl)
+ inc	(hl)
+ ld	a, %1
+ or	a, a
+} by {
+ ; directly load into a
+ ld	a, (hl)
+ inc	(hl)
+ or	a, a
+} if notUsed(%1)
+
+replace {
+ push	hl
+ pop	de
+ push	de
+} by {
+ ; remove blind pop push
+ push	hl
+ ld	d, h
+ ld	e, l
+}
+
+replace{
+ inc	%1
+ inc	%1
+ inc	%1
+ inc	%1
+ pop	hl
+ push	hl
+ ld	(hl), %1
+} by {
+ ; add %1 as a
+ ld	a, %1
+ add	a, #0x4
+ pop	hl
+ push	hl
+ ld	(hl), a
+} if notUsed('a'), notUsed(%1)
+
+replace{
+ ld	%1, #0x00
+ xor	a, a
+} by {
+ ; share 0
+ xor	a, a
+ ld	%1, a
+}
+
+replace{
+ inc	bc
+ inc	bc
+ inc	bc
+ inc	bc
+ inc	bc
+} by {
+ ; simplify bc+=5
+ ld hl, #0x0005
+ add hl, bc
+ ld b, h
+ ld c, l
+} if notUsed('hl')
+
+replace {
+ ld hl, #%1
+ add hl, bc
+ ld b, h
+ ld c, l
+ inc	bc
+} by {
+ ; add inc bc to constant instead
+ ld hl, #%2
+ add hl, bc
+ ld b, h
+ ld c, l
+} if immdInRange(0 65535 '+' %1 1 %x2)
+
+replace {
+ push	bc
+ inc	sp
+ push	de
+ inc	sp
+ ld	a, c
+ push	af
+ inc	sp
+} by {
+ ; push 2x8 as 1x16
+ ld	a, c
+ ld c, d
+ push	bc
+ push	af
+ inc	sp
+} if notUsed('c')
+
+replace {
+ ld	%1, a
+ bit	7, %1
+ jr	Z,%2
+} by {
+ ; rla instead of bit
+ ld	%1, a
+ rla
+ jr	NC,%2
+} if notUsed('a'), notUsed('f'), notSame(%1 '(hl)')
+
+// especially needed by HIDE_BKG etc
+replace {
+ ldh	a, (%1)
+ and	a, #%2
+ ldh	(%1), a
+ ldh	a, (%1)
+ and	a, #%3
+ ldh	(%1), a
+} by {
+ ; switched to ldh (c)
+ ld	c, #<(%1)
+ ldh	a, (c)
+ and	a, #%2
+ ldh	(c), a
+ ldh	a, (c)
+ and	a, #%3
+ ldh	(c), a ; c is #<(%1)
+} if notUsed('c'), notSame(%1 'c')
+
+replace {
+ ldh	(c), a ; c is #<(%1)
+ ldh	a, (%1)
+ and	a, #%2
+ ldh	(%1), a
+} by {
+ ; switched to ldh (c)
+ ldh	(c), a
+ ldh	a, (c)
+ and	a, #%2
+ ldh	(c), a ; c is #<(%1)
+} if notSame(%1 'c')
+
+replace {
+ ld	%1, %2
+ ld	%3, %4
+ ld	%2, %1
+} by {
+ ; removed not need load
+ ld	%1, %2
+ ld	%3, %4
+} if notVolatile(%1), notSimilar(%1 %3), notSame(%1 '(hl+)' '(hl-)'), notSame(%2 '(hl+)' '(hl-)')
+
+
+
+//replace {
+// inc	%1
+//} by {
+// ; not needed inc %1
+//} if notUsed(%1), notUsed('f'), notSame(%1 '(hl)')
+//
+//replace {
+// dec	%1
+//} by {
+// ; not needed inc %1
+//} if notUsed(%1), notUsed('f'), notSame(%1 '(hl)')
+//
+replace {
+ xor	a, %1
+} by {
+ ; not needed xor a, %1
+} if notUsed('a'), notUsed('f')
+//
+//replace {
+// sub	a, %1
+//} by {
+// ; not needed sub a, %1
+//} if notUsed('a'), notUsed('f')
+//
+//replace {
+// sbc	a, %1
+//} by {
+// ; not needed sbc a, %1
+//} if notUsed('a'), notUsed('f')
+//
+//replace {
+// cp	a, %1
+//} by {
+// ; not needed cp a, %1
+//} if  notUsed('f')
+
+//replace {
+// and	a, %1
+//} by {
+// ; not needed and a, %1
+//} if notUsed('a'), notUsed('f')
+//
+//replace {
+// or	a, %1
+//} by {
+// ; not needed and a, %1
+//} if notUsed('a'), notUsed('f')
+//
+//replace {
+// add	a, %1
+//} by {
+// ; not needed add a, %1
+//} if notUsed('a'), notUsed('f')
+//
+//replace {
+// adc	a, %1
+//} by {
+// ; not needed adc a, %1
+//} if notUsed('a'), notUsed('f')
+
+// those should come as late as possible
+
+replace {
+ ld	%2, #0x%4
+ ld	%1, #0x%3
+} by {
+ ; 2x8bit to 16bit write
+ ld	%1%2, #0x%3%4
+} if canAssign(%1%2 '#0x0201')
+
+// improve the above
+replace {
+ ld	%1%2, #0x0000
+ push	%1%2
+} by {
+ ; even faster than ld bc, #0
+ ; a=0
+ xor	a, a
+ ; f=0
+ rra
+ push	af
+} if notUsed('a'), notUsed(%1), notUsed(%2)
+
+replace {
+ xor	a, a
+ push	af
+ inc	sp
+ xor	a, a
+ push	af
+ inc	sp
+} by {
+ ; even faster than ld bc, #0
+ ; a=0
+ xor	a, a
+ ; f=0
+ rra
+ push	af
+ xor	a, a
+}
+
+replace {
+ ld	%1%2, #0x0080
+ push	%1%2
+} by {
+ ; no idea if somebody needs this
+ ; a=0 f=0x80
+ xor	a, a
+ push	af
+} if notUsed('a'), notUsed(%1), notUsed(%2)
+
+replace {
+ ld	%1%2,#0x0000
+ push	%1%2
+ push	af
+ inc	sp
+} by {
+ ld %1, a
+ ; even faster than ld bc, #0
+ ; a=0
+ xor	a, a
+ ; f=0
+ rra
+ push	af
+ push	bc
+ inc	sp
+} if notUsed('a'), notUsed(%1), notUsed(%2)
+
+replace restart{
+ ld	%1, %2
+ ld	%3, (hl)
+} by {
+ ; move ld instruction for later optimization
+ ld	%3, (hl)
+ ld	%1, %2
+} if notSame(%3 %1), notSame(%3 %2), notSame(%1 '(hl+)' '(hl-)' 'hl' 'h' 'l' '(hl)' '(de)' '(bc)'), notSame(%2 '(hl+)' '(hl-)' '(hl)' '(de)' '(bc)')
+
+replace restart{
+ ld	%2, %1
+ ld	%3, %2
+} by {
+ ; remove unused temporary register
+ ld	%3, %1
+} if notUsed(%2), canAssign(%3 %1), notSame(%2 '(hl+)' '(hl-)')
+
+replace {
+ ld %1, %2
+} by {
+ ; remove unused a register writes
+} if notUsed(%1), notSame(%2 '(hl+)' '(hl-)'), notSame(%1 '(hl+)' '(hl-)')
 
 ///////////////////////////////////////////////////////////////////////////////////
 // from sdcc z80:
@@ -713,7 +1496,7 @@ replace restart {
 	ld	%4,%2
 } if canAssign(%3 %1) canAssign(%4 %2)
 
-replace restart {	
+replace restart {
 	ld      sp,hl
 	ld      hl,#0x0002
 	add     hl,sp
@@ -790,8 +1573,12 @@ replace restart {
 	; modified z80 peephole 176 remove unnecessary load back
 } if notVolatile(%1), notVolatile(%2), notSame(%1 '(hl+)'), notSame(%1 '(hl-)'), notSame(%2 '(hl+)'), notSame(%2 '(hl-)')
 
+////////////////////////////////
+
+
 replace {
- call	___sdcc_call_hl
+ ld	a, #0x00
 } by {
- rst	0x20	; ___sdcc_call_hl
-}
+ ; restore xor a
+ xor	a, a
+} if notUsed('f')
