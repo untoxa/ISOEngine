@@ -2,10 +2,6 @@
 #include "nonintrinsic.h"
 #include "shadow.h"
 
-void set_RAM_bank0(void) __nonbanked __preserves_regs(b, c, d, e) { SET_RAM_BANK(0); }
-
-__addressmod set_RAM_bank0 DATA_0;
-
 // shadow buffer in RAM1
 DATA_0 unsigned char shadow_buffer[(viewport_height * viewport_width * 16)];
 
@@ -18,6 +14,8 @@ const unsigned char * const shadow_rows[] = {
 
 // scene in RAM1
 DATA_0 scene_item_t scene_items[255];
+
+// scene item count in WRAM, not SRAM0
 UBYTE scene_items_count;
 
 // collision buffer in RAM1
@@ -25,6 +23,7 @@ DATA_0 scene_t collision_buf;
 
 DATA_0 unsigned char dirty_rows[16];
 
+// this is a marker that shows the end of used SRAM0 - just for debugging
 DATA_0 UBYTE __end_marker;
 
 void __memset8() __naked {
