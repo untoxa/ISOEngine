@@ -8,7 +8,7 @@
 import sys
 import math
 
-from BGB_toolkit import load_nogmb_map, calc_profiling_stats
+from BGB_toolkit import load_noi, calc_profiling_stats
 
 def calc_percentile(data, percentile):
     size = len(data)
@@ -18,7 +18,7 @@ if len(sys.argv) < 2:
     exit('USAGE: profile.py <profiler_log> <symbols>')
 
 # loading symbols
-symbols = load_nogmb_map(sys.argv[2]) if len(sys.argv) > 2 else {}
+symbols = load_noi(sys.argv[2]) if len(sys.argv) > 2 else {}
    
 # calculating the stat
 stat = calc_profiling_stats(sys.argv[1], double_speed=False, all_data=True, symbols=symbols)

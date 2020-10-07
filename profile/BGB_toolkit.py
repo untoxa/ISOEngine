@@ -9,6 +9,17 @@ import sys
 from struct import unpack
 from array import array
 
+def load_noi(filename):
+    symbols = {}
+    with open(filename) as f:
+        line = f.readline()
+        while line:
+            decoded_line = [x.strip() for x in line.split(' ')]
+            if decoded_line[0] == 'DEF':
+                symbols[int(decoded_line[2], 16)] = decoded_line[1]
+            line = f.readline()
+    return symbols
+
 def load_nogmb_map(filename):
     symbols = {}
     with open(filename) as f:

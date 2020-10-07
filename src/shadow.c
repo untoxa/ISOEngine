@@ -50,7 +50,7 @@ __asm
 __endasm;    
 }
 
-void clear_shadow_buffer() __naked {
+void clear_shadow_buffer() __naked __preserves_regs(b, c) {
 __asm
         ld      HL, #_shadow_buffer
         ld      DE, #(viewport_height * viewport_width * (16 / 8))
@@ -58,7 +58,7 @@ __asm
 __endasm;    
 }
 
-void clear_dirty_rows() __naked {
+void clear_dirty_rows() __naked __preserves_regs(b, c) {
 __asm
         ld      HL, #_dirty_rows
         ld      DE, #(16 / 8)
@@ -66,7 +66,7 @@ __asm
 __endasm;    
 }
 
-void mark_row_dirty(UBYTE y) __naked {
+void mark_row_dirty(UBYTE y) __naked __preserves_regs(b, c) {
     y;
 __asm
         lda     HL, 2(SP)

@@ -71,8 +71,6 @@ static UBYTE anim_climb[5][2] = {
     {0x0du, 0x0cu} 
 };
 
-// sys_time is defined by crt0
-extern UWORD sys_time;
 UWORD old_time;
 
 void move_enemies() {

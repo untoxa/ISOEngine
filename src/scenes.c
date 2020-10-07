@@ -191,7 +191,7 @@ __asm
 __endasm;
 }
 
-void redraw_scene(scene_item_t * scene) {
+void redraw_scene(scene_item_t * scene) __preserves_regs(b, c) {
     scene;
 __asm
         push    BC
@@ -276,7 +276,7 @@ __asm
 __endasm; 
 }
 
-void erase_item(scene_item_t * item) {
+void erase_item(scene_item_t * item) __preserves_regs(b, c) {
     item;
 __asm
         push    BC
@@ -306,7 +306,7 @@ __asm
 __endasm;
 }
 
-void draw_masked_bitmap_XY(UBYTE x, UBYTE y, const unsigned char * spr, const unsigned char * mask) {
+void draw_masked_bitmap_XY(UBYTE x, UBYTE y, const unsigned char * spr, const unsigned char * mask) __preserves_regs(b, c) {
     x; y; spr; mask;
 __asm
         push    BC
@@ -460,7 +460,7 @@ UBYTE copy_scene(UBYTE bank, const scene_item_t * sour, scene_item_t * dest) {
     return scene_items_count;
 }
 
-void clear_map(scene_t * dest) {
+void clear_map(scene_t * dest) __preserves_regs(b, c) {
     dest;
 __asm
         lda     HL, 2(SP)

@@ -10,3 +10,7 @@ __pycache__
 /profile/*.txt
 /utils
 @usage.bat
+*.ihx
+*.noi
+/.vscode
+/*.cdb

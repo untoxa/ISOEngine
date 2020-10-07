@@ -31,13 +31,13 @@ extern const unsigned char * __tiles;
 void initialize_tiles(const unsigned char * tiles, const unsigned char * empty);
 
 // redraws the scene
-void redraw_scene(scene_item_t * scene);
+void redraw_scene(scene_item_t * scene) __preserves_regs(b, c);
 
 // draws masked bitmap to x, y
-void draw_masked_bitmap_XY(UBYTE x, UBYTE y, const unsigned char * spr, const unsigned char * mask);
+void draw_masked_bitmap_XY(UBYTE x, UBYTE y, const unsigned char * spr, const unsigned char * mask) __preserves_regs(b, c);
 
 // erase item (draws empty bitmap) 
-void erase_item(scene_item_t * item);
+void erase_item(scene_item_t * item) __preserves_regs(b, c);
 
 // removes item from the item into the scene
 void remove_scene_item(scene_item_t * scene, scene_item_t * new_item);
@@ -49,7 +49,7 @@ void place_scene_item(scene_item_t * scene, scene_item_t * new_item);
 UBYTE copy_scene(UBYTE bank, const scene_item_t * sour, scene_item_t * dest);
 
 // clear 3D map
-void clear_map(scene_t * dest);
+void clear_map(scene_t * dest) __preserves_regs(b, c);
 
 // decompress scene to 3D map
 void scene_to_map(const scene_item_t * sour, scene_t * dest);

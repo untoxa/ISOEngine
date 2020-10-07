@@ -148,7 +148,7 @@ __asm
 __endasm;
 }
 
-void copy_from_shadow_XY(UBYTE x, UBYTE y, item_bitmap_t * dest) {
+void copy_from_shadow_XY(UBYTE x, UBYTE y, item_bitmap_t * dest) __preserves_regs(b, c) {
     x; y; dest;
 __asm
         push    BC
@@ -425,7 +425,7 @@ __asm
 __endasm;
 }
 
-void draw_to_shadow_XY(UBYTE x, UBYTE y, const unsigned char * spr) {
+void draw_to_shadow_XY(UBYTE x, UBYTE y, const unsigned char * spr) __preserves_regs(b, c) {
     x; y; spr;
 __asm
         push    BC
@@ -472,7 +472,7 @@ void calculate_mask(scene_item_t * scene, scene_item_t * new_item, item_bitmap_t
     merge_inverse_masks(item, new_item, (unsigned char *)dest);
 }
 
-void apply_inverse_mask(item_bitmap_t * sour, item_bitmap_t * mask, item_bitmap_t * dest) {
+void apply_inverse_mask(item_bitmap_t * sour, item_bitmap_t * mask, item_bitmap_t * dest) __preserves_regs(b, c) {
     sour; mask; dest;
 __asm
         push    BC

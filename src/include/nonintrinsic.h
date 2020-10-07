@@ -3,9 +3,7 @@
 
 #include <gb/gb.h>
 
-extern volatile __sfr _current_bank;
-
-#define SET_ROM_BANK(n) ((_current_bank = (n)), SWITCH_ROM_MBC1((n)))
+#define SET_ROM_BANK(n) (SWITCH_ROM_MBC1((n)))
 #define GET_ROM_BANK _current_bank
 #define SET_RAM_BANK(n) (SWITCH_RAM_MBC1((n)))
 

@@ -18,16 +18,16 @@ typedef struct clip_item_t {
 check_size(clip_item_t, 8);
 
 // copy bitmap from the shadow buffer
-void copy_from_shadow_XY(UBYTE x, UBYTE y, item_bitmap_t * dest);
+void copy_from_shadow_XY(UBYTE x, UBYTE y, item_bitmap_t * dest) __preserves_regs(b, c);
 
 // draws bitmap to the shadow buffer
-void draw_to_shadow_XY(UBYTE x, UBYTE y, const unsigned char * spr);
+void draw_to_shadow_XY(UBYTE x, UBYTE y, const unsigned char * spr) __preserves_regs(b, c);
 
 // calculates the clipping mask
 void calculate_mask(scene_item_t * scene, scene_item_t * new_item, item_bitmap_t * dest);
 
 // apply inverse mask to bitmap
-void apply_inverse_mask(item_bitmap_t * sour, item_bitmap_t * mask, item_bitmap_t * dest);
+void apply_inverse_mask(item_bitmap_t * sour, item_bitmap_t * mask, item_bitmap_t * dest) __preserves_regs(b, c);
 
 // save the background under the item
 #define save_item_bkg(item) copy_from_shadow_XY(item.scene_item->x, item.scene_item->y, item.item_bkg)
