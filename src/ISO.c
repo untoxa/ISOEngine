@@ -71,7 +71,7 @@ static UBYTE anim_climb[5][2] = {
     {0x0du, 0x0cu} 
 };
 
-UWORD old_time;
+UWORD old_time = 0;
 
 void move_enemies() {
     static UBYTE change_dir;

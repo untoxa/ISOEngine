@@ -16,7 +16,7 @@
 @set CFLAGS=%CFLAGS% --max-allocs-per-node 50000
 
 @set LNAMES=-g _shadow_OAM=0xC000 -g .OAM=0xC000 -g .STACK=0xE000 -g .refresh_OAM=0xFF80 -b _DATA=0xc0a0 -b _CODE=0x0200
-@set LFLAGS=-n -j -i -k %GBDKLIB%\gbz80\ -l gbz80.lib -k %GBDKLIB%\gb\ -l gb.lib %LNAMES%
+@set LFLAGS=-n -j -i -m -w -k %GBDKLIB%\gbz80\ -l gbz80.lib -k %GBDKLIB%\gb\ -l gb.lib %LNAMES%
 @set LFILES=%GBDKLIB%gb\crt0.o
 
 @set ASMFLAGS=-plosgff -I%GBDKLIB%
