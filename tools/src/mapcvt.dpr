@@ -215,7 +215,7 @@ begin
       freeandnil(lst);
       freeandnil(rooms);
       freeandnil(world);
-      if (outfile.Size > 0) then outfile.SaveToFile(format('%s%s.c', [outpath, outname]));
+      if (outfile.Size > 0) then outfile.SaveToFile(format('%s%s', [outpath, changefileext(outname, '.c')]));
       freeandnil(outfile);
       if (outhdr.Size > 0) then begin
         writestr(outhdr, #$0d#$0a'#endif'#$0d#$0a);

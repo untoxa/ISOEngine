@@ -1,3 +1,0 @@
-@echo MAKING SYMBOLS...
-@python .\utils\noi2sym.py .\ISO.noi >ISO.sym
-@echo DONE!
