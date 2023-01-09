@@ -1,10 +1,12 @@
 #pragma bank 2
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include <stdint.h>
+
 #include "shadow.h"
 #include "mapping.h"
 
-const unsigned char viewport_map[] = {
+const uint8_t viewport_map[] = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
     0x00,0x00,0x00,0x00,0x00,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x00,0x00,0x00,0x00,0x00,
     0x00,0x00,0x00,0x0d,0x0e,0x0f,0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x00,0x00,0x00,
@@ -20,7 +22,7 @@ const unsigned char viewport_map[] = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xa7,0xa8,0xa9,0xaa,0x00,0x00,0x00,0x00,0x00,0x00,0x00
 };
 
-void set_view_port(UBYTE x, UBYTE y) __banked {
+void set_view_port(uint8_t x, uint8_t y) __banked {
     set_bkg_tiles(x, y, viewport_width, viewport_height, viewport_map);
 }
 
@@ -41,7 +43,7 @@ const tiledesc_t used_tiles[] = {
     { &shadow_buffer[12 * viewport_width * 16 + 7*16], 166,  4 }
 };
 
-void copy_tiles() __nonbanked __preserves_regs(b, c) {
+void copy_tiles() NONBANKED PRESERVES_REGS(b, c) {
 __asm
         push    BC
 
@@ -55,20 +57,20 @@ __asm
         ld      A, (HL+)
         ld      D, A
         push    DE
-        
+
         ld      A, (HL+)
         inc     A
         ld      E, A
         ld      A, (HL+)
         ld      D, A
         push    DE
-        
+
         ld      B, H
         ld      C, L
-        
+
         call    _set_bkg_data
         add     SP, #4
-        
+
         ld      H, B
         ld      L, C
 
@@ -80,7 +82,7 @@ __asm
 __endasm;
 }
 
-void copy_dirty_tiles() __nonbanked __preserves_regs(b, c) {
+void copy_dirty_tiles() NONBANKED PRESERVES_REGS(b, c) {
 __asm
         push    BC
 
@@ -92,7 +94,7 @@ __asm
         inc     DE
         or      A
         jr      Z, 2$
-        
+
         push    BC
         push    DE
 
@@ -101,31 +103,31 @@ __asm
         ld      A, (HL+)
         ld      D, A
         push    DE
-        
+
         ld      A, (HL+)
         inc     A
         ld      E, A
         ld      A, (HL+)
         ld      D, A
         push    DE
-        
+
         ld      B, H
         ld      C, L
-        
+
         call    _set_bkg_data
         add     SP, #4
-        
+
         ld      H, B
         ld      L, C
-        
+
         pop     DE
-        pop     BC        
-        
+        pop     BC
+
         dec     C
         jr      NZ, 1$
 
         jr      3$
-2$:        
+2$:
         ld      A, #4
         add     L
         ld      L, A
@@ -140,7 +142,7 @@ __asm
 __endasm;
 }
 
-void copy_tiles_row(UBYTE row) __nonbanked {
+void copy_tiles_row(uint8_t row) NONBANKED {
   if (row < viewport_height) set_bkg_data(used_tiles[row].ofs + 1, used_tiles[row].count, used_tiles[row].data);
 }
 
@@ -149,7 +151,7 @@ void copy_tiles_row(UBYTE row) __nonbanked {
 void copy_tiles() __nonbanked {
     static const tiledesc_t * used_tile_range;
     used_tile_range = used_tiles;
-    for (UBYTE i = 0; i < viewport_height; i++) {
+    for (uint8_t i = 0; i < viewport_height; i++) {
         set_bkg_data(used_tile_range->ofs + 1, used_tile_range->count, used_tile_range->data);
         used_tile_range++;
     }

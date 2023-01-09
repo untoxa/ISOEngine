@@ -1,6 +1,8 @@
 #ifndef MISC_RESOURCES_H_INCLUDE
 #define MISC_RESOURCES_H_INCLUDE
 
-extern const unsigned char empty_tiles[];
+#include <stdint.h>
+
+extern const uint8_t empty_tiles[];
 
 #endif

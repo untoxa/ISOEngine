@@ -1,12 +1,5 @@
-#include <gb/gb.h>
-
-#if defined(DEBUGGING) || defined(PROFILING)
-#include <gb/bgb_emu.h>
-#endif
-#ifdef DEBUGGING
-#include <stdio.h>
-static char buf[0x20];
-#endif
+#include <gbdk/platform.h>
+#include <stdint.h>
 
 #include "globals.h"
 #include "nonintrinsic.h"
@@ -32,52 +25,52 @@ const world_item_t * position = &world[0];
 #define enemies_count 2
 item_bitmap_t enemies_bkg[enemies_count];
 scene_item_t enemies_itm[enemies_count] = {
-    {.id=0x0bu, .n=0, .next=0}, 
+    {.id=0x0bu, .n=0, .next=0},
     {.id=0x0bu, .n=0, .next=0}
 };
 clip_item_t enemies[enemies_count] = {
-    {.x=3, .y=0, .z=0, .flags=0, .item_bkg=&enemies_bkg[0], .scene_item=&enemies_itm[0]}, 
+    {.x=3, .y=0, .z=0, .flags=0, .item_bkg=&enemies_bkg[0], .scene_item=&enemies_itm[0]},
     {.x=2, .y=3, .z=0, .flags=0, .item_bkg=&enemies_bkg[1], .scene_item=&enemies_itm[1]}
 };
 const scene_item_t * enemies_room = r2; // enemies only exist in room2
 #define enemies_exist (position->room == enemies_room)
-#define iter_enemies(key, what) for (UBYTE key = 0; key < enemies_count; key++) (what)
-#define rev_iter_enemies(key, what) for (INT8 key = enemies_count; key != 0; key--) (what)
+#define iter_enemies(key, what) for (uint8_t key = 0; key < enemies_count; key++) (what)
+#define rev_iter_enemies(key, what) for (int8_t key = enemies_count; key != 0; key--) (what)
 
 // player item
 item_bitmap_t player_bkg;
 scene_item_t player_item = {.id=0x0cu, .n=0, .next=0};
 clip_item_t player = {.x=8, .y=0, .z=0, .flags=0, .item_bkg=&player_bkg, .scene_item=&player_item};
 
-UBYTE joy, redraw, falling, room_changed;
-static UBYTE tmp;
-static UBYTE scene_count;
+uint8_t joy, redraw, falling, room_changed;
+static uint8_t tmp;
+static uint8_t scene_count;
 static enum scroll_dir sc_dir;
 
 static enum scroll_dir anim_dir;
-static UBYTE anim_ids[5][2] = {
+static uint8_t anim_ids[5][2] = {
     {0x00u, 0x00u},
-    {0x0eu, 0x0cu}, 
+    {0x0eu, 0x0cu},
     {0x0du, 0x0cu},
-    {0x0eu, 0x0cu}, 
-    {0x0du, 0x0cu} 
+    {0x0eu, 0x0cu},
+    {0x0du, 0x0cu}
 };
-static UBYTE anim_fall[2] = {0x0fu, 0x0cu}; 
-static UBYTE anim_climb[5][2] = { 
+static uint8_t anim_fall[2] = {0x0fu, 0x0cu};
+static uint8_t anim_climb[5][2] = {
     {0x00u, 0x00u},
-    {0x0eu, 0x0cu}, 
+    {0x0eu, 0x0cu},
     {0x0du, 0x0cu},
-    {0x0eu, 0x0cu}, 
-    {0x0du, 0x0cu} 
+    {0x0eu, 0x0cu},
+    {0x0du, 0x0cu}
 };
 
-UWORD old_time = 0;
+uint16_t old_time = 0;
 
 void move_enemies() {
-    static UBYTE change_dir;
+    static uint8_t change_dir;
     static clip_item_t * enemy;
     enemy = enemies;
-    for (UBYTE i = 0u; i < enemies_count; i++) {
+    for (uint8_t i = 0u; i < enemies_count; i++) {
         change_dir = 0u;
         switch (enemy->flags & 3u) {
             case 0u : {
@@ -111,7 +104,7 @@ void move_enemies() {
     }
 }
 
-void redraw_all(UBYTE room_changed) {
+void redraw_all(uint8_t room_changed) {
     if (scene_count) {
         clear_dirty_rows();
         if (!room_changed) {
@@ -120,12 +113,12 @@ void redraw_all(UBYTE room_changed) {
             // restore background under the player
             restore_item_bkg(player);
         }
-        
+
         // set the new position of the player item
-        update_multiple_items_pos(&player, 1);                                
+        update_multiple_items_pos(&player, 1);
         // set the new position for each enemy item
         update_multiple_items_pos(enemies, enemies_count);
-                            
+
         if (room_changed) redraw_scene(scene_items);
 
         // save background under the player
@@ -143,25 +136,26 @@ void redraw_all(UBYTE room_changed) {
         //copy_tiles();
         copy_dirty_tiles();
     } else {
-        if (sc_dir == SC_NONE) copy_tiles(); else scroll_out(sc_dir, 1, 2); 
+        if (sc_dir == SC_NONE) copy_tiles(); else scroll_out(sc_dir, 1, 2);
     }
 }
 
 void main() {
+    ENABLE_RAM;
     SET_RAM_BANK(0);
-    SET_ROM_BANK(scene_resources.bank);
+    SET_ROM_BANK(BANK(scene_resources));
 
-    initialize_tiles(scene_resources.data->data, empty_tiles);
-    
+    initialize_tiles(scene_resources.data, empty_tiles);
+
     // clear the shadow buffer
     clear_shadow_buffer();
-    
+
     // clear the screen
     set_bkg_tiles(0, 0, 20, 18, shadow_buffer);
 
     // initialize the player
-    player.scene_item->x = to_x(player.x, player.y, player.z), 
-    player.scene_item->y = to_y(player.x, player.y, player.z), 
+    player.scene_item->x = to_x(player.x, player.y, player.z),
+    player.scene_item->y = to_y(player.x, player.y, player.z),
     player.scene_item->coords = to_coords(player.x, player.y, player.z);
 
     // copy scene to RAM
@@ -174,11 +168,11 @@ void main() {
 
         // redraw the scene into the shadow buffer
         redraw_scene(scene_items);
-        
+
     } else clear_map(&collision_buf);
     // copy the tiles into vram
     copy_tiles();
-    
+
     // save background under the player
     save_item_bkg(player);
     // save background under the enemies
@@ -197,7 +191,7 @@ void main() {
         if (player.z > 0) {
             tmp = collision_buf[player.x][player.z - 1][player.y];
             if ((tmp == 0u) || (tmp == 1u) || (tmp == 9u)) {
-                player.z--; 
+                player.z--;
                 player.scene_item->id = anim_fall[0];
                 redraw_all(0);
                 player.scene_item->id = anim_fall[1];
@@ -225,7 +219,7 @@ void main() {
                         player.x--;
                         player.z++;
                         player.scene_item->id = anim_climb[SC_WEST][1];
-                        redraw_all(0);                        
+                        redraw_all(0);
                     }
                 }
                 anim_dir = SC_WEST;
@@ -246,7 +240,7 @@ void main() {
                         redraw_all(0);
                         player.z++;
                         player.scene_item->id = anim_climb[SC_EAST][1];
-                        redraw_all(0);                        
+                        redraw_all(0);
                     }
                 }
             } else if (joy & J_UP) {
@@ -266,11 +260,11 @@ void main() {
                         player.y++;
                         player.z++;
                         player.scene_item->id = anim_climb[SC_NORTH][1];
-                        redraw_all(0);                        
+                        redraw_all(0);
                     }
                 }
             } else if (joy & J_DOWN) {
-                if (!player.y) { 
+                if (!player.y) {
                     room_changed = try_change_room(position->S, (player.y = max_scene_y - 1u, sc_dir = SC_SOUTH)); // go south
                 } else {
                     tmp = collision_buf[player.x][player.z][player.y - 1u];
@@ -286,7 +280,7 @@ void main() {
                         redraw_all(0);
                         player.z++;
                         player.scene_item->id = anim_climb[SC_SOUTH][1];
-                        redraw_all(0);                        
+                        redraw_all(0);
                     }
                 }
             } else if (joy & J_SELECT) {
@@ -298,7 +292,7 @@ void main() {
                 // redraw everything
                 sc_dir = SC_NONE;
                 redraw_all(1);
-            } 
+            }
         }
         if (!room_changed) {
             // move enemies
@@ -312,14 +306,14 @@ void main() {
             clear_shadow_buffer();
             // decompress scene to 3D map
             scene_count = copy_scene(position->room_bank, position->room, scene_items);
-            if (scene_count) scene_to_map(scene_items, &collision_buf); else clear_map(&collision_buf);                
+            if (scene_count) scene_to_map(scene_items, &collision_buf); else clear_map(&collision_buf);
             redraw = 1u;
         }
         // redraw
         if (redraw) {
-            redraw_all(room_changed); 
+            redraw_all(room_changed);
         } else wait_vbl_done();
-        
+
         room_changed = redraw = 0u;
     }
 }
