@@ -10,11 +10,17 @@
 #include "multiple.h"
 #include "effects.h"
 #include "transform.h"
+#include "musicmanager.h"
 
 #include "rooms.h"
 
 #include "scene_resources.h"
 #include "misc_resources.h"
+
+// audio assets
+#include "music.h"
+#include "sound_dest_fail.h" 
+#include "sound_select_fail.h"
 
 #define try_change_room(dir, action) ((dir) ? (position = (dir), (action), 1u) : 0u)
 
@@ -142,6 +148,26 @@ void redraw_all(uint8_t room_changed) {
 
 void main() {
     ENABLE_RAM;
+
+    music_init();
+    
+    CRITICAL {
+#if defined(NINTENDO)
+        music_setup_timer();
+        add_low_priority_TIM(music_play_isr);
+#else 
+        add_VBL(music_play_isr);    
+#endif
+    }
+#if defined(NINTENDO)
+    set_interrupts(IE_REG | TIM_IFLAG);
+#endif
+
+    static uint8_t music_paused = TRUE;
+    music_load(BANK(music_ingame), &music_ingame), music_pause(music_paused = TRUE);
+
+//    music_play_sfx(BANK(sound_select_fail), sound_select_fail, SFX_MUTE_MASK(sound_select_fail));
+
     SET_RAM_BANK(0);
     SET_ROM_BANK(BANK(scene_resources));
 
@@ -185,7 +211,7 @@ void main() {
 
     room_changed = 0, redraw = 1u;
 
-    while (1) {
+    while (TRUE) {
         // fall
         falling = 0;
         if (player.z > 0) {
