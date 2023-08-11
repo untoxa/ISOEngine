@@ -28,7 +28,7 @@ DATA_0 uint8_t dirty_rows[16];
 // this is a marker that shows the end of used SRAM0 - just for debugging
 DATA_0 uint8_t __end_marker;
 
-void __memset8() NAKED {
+void __memset8(void) NAKED {
 __asm
         inc     D
         inc     E
@@ -52,7 +52,7 @@ __asm
 __endasm;
 }
 
-void clear_shadow_buffer() NAKED PRESERVES_REGS(b, c) {
+void clear_shadow_buffer(void) NAKED PRESERVES_REGS(b, c) {
 __asm
         ld      HL, #_shadow_buffer
         ld      DE, #(viewport_height * viewport_width * (16 / 8))
@@ -60,7 +60,7 @@ __asm
 __endasm;
 }
 
-void clear_dirty_rows() NAKED PRESERVES_REGS(b, c) {
+void clear_dirty_rows(void) NAKED PRESERVES_REGS(b, c) {
 __asm
         ld      HL, #_dirty_rows
         ld      DE, #(16 / 8)

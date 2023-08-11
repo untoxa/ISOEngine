@@ -11,24 +11,24 @@
 #endif
 
 #define MUSIC_STOP_BANK 0xffu
-//#define FORCE_CUT_SFX                                   // don't cut by default 
+//#define FORCE_CUT_SFX                                   // don't cut by default
 
 extern volatile uint8_t music_current_track_bank;
 extern uint8_t music_mute_mask;
 extern const MUSIC_MODULE * music_next_track;
 
-inline void music_setup_timer() {
+inline void music_setup_timer(void) {
 #if defined(NINTENDO)
     TMA_REG = ((_cpu == CGB_TYPE) && (*(UBYTE *)0x0143 & 0x80)) ? 0x80u : 0xC0u;
     TAC_REG = 0x07u;
 #endif
 }
 
-inline void music_init() {
+inline void music_init(void) {
     sfx_sound_init();
 }
 
-inline void music_sound_cut() {
+inline void music_sound_cut(void) {
     sfx_sound_cut();
 }
 
@@ -41,7 +41,7 @@ inline void music_sound_cut_mask(uint8_t mask) {
     sfx_sound_cut_mask(mask);
 }
 
-void music_play_isr();
+void music_play_isr(void);
 
 inline void music_load(uint8_t bank, const MUSIC_MODULE * data) {
     music_current_track_bank = MUSIC_STOP_BANK, music_next_track = data; music_current_track_bank = bank;
@@ -49,7 +49,7 @@ inline void music_load(uint8_t bank, const MUSIC_MODULE * data) {
 
 void music_pause(uint8_t pause);
 
-inline void music_stop() {
+inline void music_stop(void) {
     music_current_track_bank = MUSIC_STOP_BANK, music_sound_cut();
 }
 

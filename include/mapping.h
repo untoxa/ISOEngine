@@ -15,8 +15,8 @@ extern const uint8_t viewport_map[];
 void set_view_port(uint8_t x, uint8_t y) BANKED;
 
 extern const tiledesc_t * used_tile_range;
-void copy_tiles() NONBANKED PRESERVES_REGS(b, c);
-void copy_dirty_tiles() NONBANKED PRESERVES_REGS(b, c);
+void copy_tiles(void) NONBANKED PRESERVES_REGS(b, c);
+void copy_dirty_tiles(void) NONBANKED PRESERVES_REGS(b, c);
 void copy_tiles_row(uint8_t row);
 
 #endif

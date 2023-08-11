@@ -19,10 +19,10 @@
 
 // audio assets
 #include "music.h"
-#include "sound_dest_fail.h" 
+#include "sound_dest_fail.h"
 #include "sound_select_fail.h"
 
-#define try_change_room(dir, action) ((dir) ? (position = (dir), (action), 1u) : 0u)
+#define try_change_room(dir,action) ((dir) ? (position = (dir),(action),1u) : 0u)
 
 // set initial position in the global world
 const world_item_t * position = &world[0];
@@ -72,7 +72,7 @@ static uint8_t anim_climb[5][2] = {
 
 uint16_t old_time = 0;
 
-void move_enemies() {
+void move_enemies(void) {
     static uint8_t change_dir;
     static clip_item_t * enemy;
     enemy = enemies;
@@ -146,17 +146,17 @@ void redraw_all(uint8_t room_changed) {
     }
 }
 
-void main() {
+void main(void) {
     ENABLE_RAM;
 
     music_init();
-    
+
     CRITICAL {
 #if defined(NINTENDO)
         music_setup_timer();
         add_low_priority_TIM(music_play_isr);
-#else 
-        add_VBL(music_play_isr);    
+#else
+        add_VBL(music_play_isr);
 #endif
     }
 #if defined(NINTENDO)

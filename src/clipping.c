@@ -4,7 +4,7 @@
 #include "clipping.h"
 #include "shadow.h"
 
-void __get() NAKED {
+void __get(void) NAKED {
 __asm
         ;; now HL: source, DE: dest, C: dy
 
@@ -67,7 +67,7 @@ __asm
 __endasm;
 }
 
-void __get_map() NAKED {
+void __get_map(void) NAKED {
 __asm
         ;; now B: x, C: y, DE: mask
 
@@ -273,7 +273,7 @@ void merge_inverse_masks(scene_item_t * item, scene_item_t * new_item, uint8_t *
 }
 
 static uint8_t __dy, __counter;
-void __copy() NAKED {
+void __copy(void) NAKED {
 __asm
         ;; now HL: data, BC: item
 
@@ -334,7 +334,7 @@ __endasm;
 }
 
 static uint8_t __put_map_x, __put_map_y;
-void __put_map() NAKED {
+void __put_map(void) NAKED {
 __asm
         ;; now BC: item
 

@@ -17,8 +17,8 @@ extern scene_item_t scene_items[255];
 extern uint8_t scene_items_count;
 extern scene_t collision_buf;
 
-void clear_shadow_buffer() PRESERVES_REGS(b, c);
-void clear_dirty_rows() PRESERVES_REGS(b, c);
+void clear_shadow_buffer(void) PRESERVES_REGS(b, c);
+void clear_dirty_rows(void) PRESERVES_REGS(b, c);
 
 void mark_row_dirty(uint8_t y) OLDCALL PRESERVES_REGS(b, c);
 

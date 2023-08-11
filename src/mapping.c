@@ -43,7 +43,7 @@ const tiledesc_t used_tiles[] = {
     { &shadow_buffer[12 * viewport_width * 16 + 7*16], 166,  4 }
 };
 
-void copy_tiles() NONBANKED PRESERVES_REGS(b, c) {
+void copy_tiles(void) NONBANKED PRESERVES_REGS(b, c) {
 __asm
         push    BC
 
@@ -82,7 +82,7 @@ __asm
 __endasm;
 }
 
-void copy_dirty_tiles() NONBANKED PRESERVES_REGS(b, c) {
+void copy_dirty_tiles(void) NONBANKED PRESERVES_REGS(b, c) {
 __asm
         push    BC
 

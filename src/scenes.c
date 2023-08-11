@@ -14,7 +14,7 @@ void initialize_tiles(const uint8_t * tiles, const uint8_t * empty) {
 }
 
 static uint8_t __dy, __counter;
-void __merge_masked() NAKED {
+void __merge_masked(void) NAKED {
 __asm
         ;; now HL: data, DE: mask, BC: item
 
@@ -96,7 +96,7 @@ __asm
 __endasm;
 }
 
-void __put_masked_map() NAKED {
+void __put_masked_map(void) NAKED {
 __asm
         ;; now DE: mask, BC: item
 
